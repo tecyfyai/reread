@@ -1,0 +1,28 @@
+name: Bug or wrong number
+description: ReRead fails, or shows a number that looks wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please never attach a session `.jsonl` file: it holds your whole conversation.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: json
+    attributes:
+      label: Output of `npx reread-cli --json --anon --days 7`
+      description: It has no conversation text, and with --anon no project names or branches. Check it before you paste it.
+      render: json
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: reread --version, claude --version, node --version, and your operating system
+      placeholder: reread 0.2.0, Claude Code 2.1.0, Node 24.1.0, macOS 15
+    validations:
+      required: true

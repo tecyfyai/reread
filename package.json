@@ -1,0 +1,61 @@
+{
+  "name": "reread-cli",
+  "version": "0.2.0",
+  "description": "Token usage and prompt cache analyzer for Claude Code, Codex and Antigravity: how much of your coding agent's usage was re-reading context, and why. Visual report and a cache-countdown status line. Local only; uploads nothing.",
+  "type": "module",
+  "bin": {
+    "reread": "bin/reread.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "lint": "eslint . && prettier --check . && tsc",
+    "format": "prettier --write .",
+    "preview": "node scripts/preview.js",
+    "prepublishOnly": "npm run lint && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tecyfyai/reread.git"
+  },
+  "homepage": "https://github.com/tecyfyai/reread#readme",
+  "bugs": "https://github.com/tecyfyai/reread/issues",
+  "keywords": [
+    "claude-code",
+    "claude",
+    "anthropic",
+    "openai",
+    "openai-codex",
+    "codex",
+    "gemini",
+    "antigravity",
+    "claude-code-usage",
+    "token-usage",
+    "token-cost",
+    "prompt-caching",
+    "prompt-cache",
+    "context-window",
+    "llm",
+    "llm-cost",
+    "ccusage",
+    "cli",
+    "statusline",
+    "usage-limit"
+  ],
+  "author": "ReRead contributors",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "20.19.43",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "typescript": "7.0.2"
+  }
+}

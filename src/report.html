@@ -1,0 +1,1183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; base-uri 'none'; form-action 'none'">
+<title>ReRead report</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #fcfcfb;
+  --surface: #ffffff;
+  --surface-2: #f4f4f1;
+  --line: #e7e6e2;
+  --line-2: #d3d2cc;
+  --text: #0b0b0b;
+  --text-2: #3d3c39;
+  --muted: #5f5e59;
+  --read: #2a78d6;
+  --rebuild: #eb6834;
+  --other: #a3a29a;
+  --shrink: #5f5e59;
+  --focus: #2a78d6;
+  --tip-bg: #18181a;
+  --tip-text: #f5f5f3;
+  --tip-muted: #b9b8b1;
+  --hover: #f6f6f3;
+  --selected: #eef4fc;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #111110;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --line: #2d2d2a;
+    --line-2: #44443f;
+    --text: #f0efec;
+    --text-2: #d4d3cb;
+    --muted: #a5a49b;
+    --read: #3987e5;
+    --rebuild: #e0652f;
+    --other: #6b6a64;
+    --shrink: #a5a49b;
+    --focus: #5598e7;
+    --tip-bg: #f0efec;
+    --tip-text: #111110;
+    --tip-muted: #4b4a46;
+    --hover: #20201e;
+    --selected: #1c2531;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+a { color: var(--read); text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mono { font-family: var(--mono); }
+.muted { color: var(--muted); }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 720px) { .wrap { padding: 0 32px; } }
+
+/* top bar */
+.bar { border-bottom: 1px solid var(--line); background: var(--bg); }
+.bar .wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 56px; padding-top: 8px; padding-bottom: 8px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: auto; }
+.brand svg { width: 20px; height: 20px; color: var(--read); }
+.brand .ver { font: 500 12px var(--mono); color: var(--muted); }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 36px; padding: 0 12px;
+  border: 1px solid var(--line-2); border-radius: 8px;
+  background: var(--surface); color: var(--text);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: background-color .12s, border-color .12s;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:disabled { cursor: default; opacity: .6; }
+.btn svg { width: 15px; height: 15px; flex: none; }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.primary:hover { opacity: .88; }
+.btn[aria-pressed="true"] { background: var(--selected); border-color: var(--read); }
+.btn .check { display: none; }
+.btn[aria-pressed="true"] .check { display: inline; }
+@media (pointer: coarse) { .btn { min-height: 44px; } }
+@media (max-width: 520px) { .tools { width: 100%; } .tools .btn { flex: 1 1 auto; justify-content: center; } .wide { display: none; } }
+
+/* hero */
+.hero { padding: 40px 0 8px; }
+.private { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+.private svg { width: 14px; height: 14px; }
+.headline { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 18px; margin: 0; font-weight: 600; }
+.headline .big { font-size: clamp(64px, 14vw, 112px); line-height: .95; letter-spacing: -0.045em; font-weight: 650; }
+.headline .words { font-size: clamp(20px, 3.4vw, 30px); line-height: 1.2; letter-spacing: -0.015em; max-width: 18em; }
+.meta { margin: 14px 0 0; color: var(--muted); font-size: 14px; }
+.meta b { color: var(--text-2); font-weight: 600; }
+
+.split { margin-top: 28px; }
+.split-bar { display: flex; height: 18px; gap: 2px; border-radius: 5px; overflow: hidden; background: var(--surface-2); }
+.split-bar span { display: block; min-width: 0; }
+.legend3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+@media (max-width: 640px) { .legend3 { grid-template-columns: 1fr; gap: 10px; } }
+.leg { display: grid; grid-template-columns: 12px 1fr; column-gap: 10px; }
+.leg .sw { margin-top: 6px; }
+.leg .v { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+.leg .l { font-weight: 500; color: var(--text-2); }
+.leg .d { font-size: 13px; color: var(--muted); grid-column: 2; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.sw.read { background: var(--read); }
+.sw.rebuild { background: var(--rebuild); }
+.sw.other { background: var(--other); }
+.note { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
+.note b { color: var(--text-2); }
+
+/* sections */
+main { padding-bottom: 24px; }
+.grid { display: grid; gap: 16px; margin-top: 16px; }
+@media (min-width: 900px) { .grid.two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-width: 0; }
+@media (max-width: 480px) { .card { padding: 16px; } }
+.first { margin-top: 32px; }
+.card > h2, .card-head h2 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -0.005em; }
+.sub { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.card-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.card > h2 + .sub { margin-bottom: 14px; }
+.empty { color: var(--muted); font-size: 13px; padding: 12px 0; margin: 0; }
+.lead { margin: 0 0 14px; font-size: 14px; color: var(--text-2); }
+.lead b { color: var(--text); }
+
+/* charts */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart-focus { border-radius: 6px; }
+.axis text { fill: var(--muted); font-size: 11px; font-family: var(--sans); }
+.axis line { stroke: var(--line); }
+.axis .base { stroke: var(--line-2); }
+.hl { fill: var(--surface-2); }
+.tip {
+  position: absolute; z-index: 5; pointer-events: none;
+  background: var(--tip-bg); color: var(--tip-text);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.45;
+  min-width: 160px; max-width: 260px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .18);
+}
+.tip[hidden] { display: none; }
+.tip .t { font-weight: 600; margin-bottom: 4px; }
+.tip .r { display: flex; align-items: center; gap: 6px; }
+.tip .r .k { color: var(--tip-muted); flex: 1; }
+.tip .r .sw { width: 8px; height: 8px; border-radius: 2px; }
+.tip .what { margin-top: 4px; padding-top: 4px; border-top: 1px solid color-mix(in srgb, var(--tip-muted) 40%, transparent); }
+details.table-view { margin-top: 12px; }
+details.table-view summary { cursor: pointer; font-size: 13px; color: var(--muted); width: max-content; padding: 4px 0; }
+details.table-view summary:hover { color: var(--text); }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--text-2); margin-bottom: 10px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend svg { width: 14px; height: 14px; }
+
+/* horizontal bars */
+.hbars { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 10px 12px; align-items: center; }
+.hbars .lbl { font: 12px var(--mono); color: var(--text-2); }
+.hbars .track { height: 14px; display: flex; gap: 2px; }
+.hbars .track span { display: block; height: 100%; }
+.hbars .track span:first-child { border-radius: 3px 0 0 3px; }
+.hbars .track span:last-child { border-radius: 0 3px 3px 0; }
+.hbars .track span:only-child { border-radius: 3px; }
+.hbars .val { font-size: 12px; text-align: right; color: var(--text-2); white-space: nowrap; }
+.hbars .val .muted { margin-left: 6px; }
+.hbars .long { font-weight: 600; color: var(--text); }
+
+/* why lost */
+.why { list-style: none; margin: 0; padding: 0; }
+.why li { display: grid; grid-template-columns: 18px minmax(0, 1fr) max-content; gap: 2px 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.why li:first-child { border-top: 0; padding-top: 0; }
+.why svg { width: 16px; height: 16px; margin-top: 2px; }
+.why .name { font-weight: 600; }
+.why .exp { font-size: 13px; color: var(--muted); grid-column: 2 / -1; max-width: 40em; }
+.why .nums { text-align: right; font-size: 13px; }
+.why .nums .usd { font-weight: 600; font-size: 14px; }
+.why .nums .muted { display: block; font-size: 12px; }
+
+/* tables */
+.tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl tbody tr:last-child td { border-bottom: 0; }
+.tbl .num { text-align: right; white-space: nowrap; }
+.tbl th.num { text-align: right; }
+.tbl td:first-child, .tbl th:first-child { padding-left: 0; }
+.tbl td:last-child, .tbl th:last-child { padding-right: 0; }
+.tbl .name { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.minibar { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.minibar .track { width: 56px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; display: flex; gap: 1px; }
+.minibar .track span { height: 100%; display: block; }
+
+.sessions-tools { display: flex; gap: 8px; align-items: center; }
+.search { position: relative; }
+.search svg { position: absolute; left: 10px; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search input {
+  height: 36px; width: 260px; max-width: 100%; padding: 0 10px 0 30px;
+  border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text); font: 13px var(--sans);
+}
+.search input::placeholder { color: var(--muted); }
+@media (max-width: 640px) { .sessions-tools, .search, .search input { width: 100%; } }
+@media (pointer: coarse) { .search input { height: 44px; font-size: 16px; } }
+#sessions table.tbl { min-width: 820px; }
+.tbl th button.sort {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; color: inherit; border-radius: 4px;
+}
+.tbl th button.sort:hover { color: var(--text); }
+.tbl th button.sort:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tbl th .arrow { width: 10px; display: inline-block; text-align: center; opacity: 0; }
+.tbl th[aria-sort] { color: var(--text); }
+.tbl th[aria-sort] .arrow { opacity: 1; }
+.srow { cursor: pointer; transition: background-color .1s; }
+.srow:hover { background: var(--hover); }
+.srow[aria-expanded="true"] { background: var(--selected); }
+.srow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.srow .chev { display: inline-block; width: 12px; color: var(--muted); transition: transform .15s; }
+.srow[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.srow td:first-child { white-space: nowrap; }
+@media (max-width: 520px) { .tbl .opt, .grid .minibar .track { display: none; } .tbl td, .tbl th { padding-left: 6px; padding-right: 6px; } }
+.srow .sid { display: block; font: 11px var(--mono); color: var(--muted); margin-left: 16px; }
+.reb { display: inline-flex; gap: 6px; justify-content: flex-end; align-items: center; }
+.reb svg { width: 11px; height: 11px; flex: none; }
+.stats .reb { display: flex; gap: 6px; align-items: center; }
+.reb span { display: inline-flex; align-items: center; gap: 2px; }
+.tbl tr.drill > td { padding: 0; background: var(--selected); }
+.drill-inner { position: sticky; left: 0; padding: 16px 0 20px; }
+.drill-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 820px) { .drill-grid { grid-template-columns: minmax(0, 1fr) 230px; } }
+.drill-head { font-size: 13px; color: var(--text-2); margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.drill-head b { color: var(--text); }
+.drill .chart { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; }
+.drill .fine { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+.stats { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; font-size: 13px; align-content: start; }
+.stats dt { color: var(--muted); }
+.stats dd { margin: 0; text-align: right; font-weight: 500; }
+.stats .sep { grid-column: 1 / -1; border-top: 1px solid var(--line-2); margin: 4px 0; }
+.more { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+
+/* key findings */
+.findings { display: grid; gap: 12px; margin-top: 28px; }
+@media (min-width: 720px) { .findings { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.finding { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; align-items: baseline; }
+.finding .v { font: 650 26px/1.1 var(--sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; grid-row: span 3; min-width: 64px; }
+.finding h3 { font-size: 14px; font-weight: 600; margin: 0; line-height: 1.4; }
+.finding p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.finding .act { color: var(--text-2); }
+.finding .act::before { content: '→ '; color: var(--read); font-weight: 600; }
+.findings-head { font-size: 15px; font-weight: 600; margin: 32px 0 0; }
+.show-all { margin-top: 12px; }
+
+/* share */
+.share-grid { display: grid; gap: 20px; }
+@media (min-width: 820px) { .share-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 420px); align-items: start; } }
+.quote { margin: 0 0 14px; padding: 12px 14px; border-left: 3px solid var(--read); background: var(--surface-2); border-radius: 0 8px 8px 0; color: var(--text-2); }
+.share-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.status { font-size: 13px; color: var(--muted); min-height: 1.5em; }
+.card-preview { width: 100%; height: auto; display: block; border-radius: 8px; border: 1px solid var(--line); }
+
+/* footer */
+footer { border-top: 1px solid var(--line); margin-top: 32px; padding: 24px 0 48px; font-size: 13px; color: var(--muted); }
+footer h2 { font-size: 13px; color: var(--text-2); margin: 0 0 8px; font-weight: 600; }
+footer ul { margin: 0 0 16px; padding-left: 18px; max-width: 760px; }
+footer li { margin: 4px 0; }
+footer .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.empty-page { padding: 80px 0; }
+.empty-page h1 { font-size: 24px; margin: 0 0 8px; }
+
+@media print {
+  .bar .tools, .share-actions, .sessions-tools, details.table-view { display: none; }
+  .card { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      <span>ReRead</span><span class="ver" id="ver"></span>
+    </div>
+    <div class="tools" role="toolbar" aria-label="Report actions">
+      <button type="button" class="btn" id="hide-names" aria-pressed="false">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8Z"/><circle cx="8" cy="8" r="2"/><path class="check" d="M2 2l12 12"/></svg>
+        Hide names
+      </button>
+      <button type="button" class="btn" id="export-json" aria-label="Export JSON">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>
+        <span><span class="wide">Export </span>JSON</span>
+      </button>
+      <button type="button" class="btn" id="export-csv" aria-label="Export sessions as CSV">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>
+        <span><span class="wide">Export </span>CSV</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <section class="hero" aria-labelledby="headline">
+    <p class="private">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
+      Made on your machine. Nothing was uploaded.
+    </p>
+    <h1 class="headline" id="headline"><span class="big" id="hero-pct">–</span><span class="words" id="hero-words">of your Claude Code usage was re&#8209;reading context</span></h1>
+    <p class="meta" id="meta"></p>
+    <div class="split">
+      <div class="split-bar" id="split-bar" role="img"></div>
+      <div class="legend3" id="split-legend"></div>
+      <p class="note" id="split-note"></p>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-findings" id="findings-box">
+    <h2 class="findings-head" id="h-findings">Key findings</h2>
+    <div class="findings" id="findings"></div>
+  </section>
+
+  <section class="card first" aria-labelledby="h-daily">
+    <div class="card-head">
+      <div>
+        <h2 id="h-daily">Day by day</h2>
+        <p class="sub">What each day’s replies would cost on the API, split by what the money paid for.</p>
+      </div>
+      <div class="chart-legend" aria-hidden="true">
+        <span><i class="sw read"></i>Cache reads</span>
+        <span><i class="sw rebuild"></i>History written again</span>
+        <span><i class="sw other"></i>Everything else</span>
+      </div>
+    </div>
+    <div id="daily"></div>
+  </section>
+
+  <div class="grid two">
+    <section class="card" aria-labelledby="h-size">
+      <h2 id="h-size">Cost by context size</h2>
+      <p class="sub">Every reply sends the whole context again, so long contexts cost more per reply.</p>
+      <div id="buckets"></div>
+    </section>
+    <section class="card" aria-labelledby="h-why">
+      <h2 id="h-why">Why the cache was lost</h2>
+      <p class="sub">Each time, the whole history up to that reply was written to the cache again at full price.</p>
+      <div id="why"></div>
+    </section>
+  </div>
+
+  <div class="grid two">
+    <section class="card" aria-labelledby="h-proj">
+      <h2 id="h-proj">By project</h2>
+      <p class="sub">Folder each session ran in.</p>
+      <div id="projects"></div>
+    </section>
+    <section class="card" aria-labelledby="h-models">
+      <h2 id="h-models">By model</h2>
+      <p class="sub">Each model keeps its own cache.</p>
+      <div id="models"></div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px" id="sessions" aria-labelledby="h-sessions">
+    <div class="card-head">
+      <div>
+        <h2 id="h-sessions">Sessions</h2>
+        <p class="sub" id="sessions-sub">Costliest first. Open a session to see its context reply by reply.</p>
+      </div>
+      <div class="sessions-tools">
+        <label class="search">
+          <span class="sr">Filter sessions</span>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+          <input type="search" id="filter" placeholder="Filter by project, branch or id" autocomplete="off" spellcheck="false">
+        </label>
+      </div>
+    </div>
+    <div class="tbl-scroll" id="sessions-scroll"></div>
+    <p class="more" id="sessions-more" aria-live="polite"></p>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="h-share">
+      <h2 id="h-share">Share it</h2>
+      <p class="sub">The text and the picture carry only the totals: no project, branch or session.</p>
+      <div class="share-grid">
+        <div>
+          <p class="quote" id="share-text"></p>
+          <div class="share-actions">
+            <button type="button" class="btn primary" id="copy-text">Copy text</button>
+            <button type="button" class="btn" id="download-image">Download image</button>
+            <span class="status" id="share-status" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+        <canvas id="card" class="card-preview" width="1200" height="630" role="img" aria-label="Share picture preview"></canvas>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <h2>How it counts</h2>
+    <ul>
+      <li>Each kind of token (input, cache writes, cache reads, output) is weighed by its API price for the model that used it, so the shares match what the same tokens would cost on the API.</li>
+      <li>“Written again” is an estimate from token counts: a reply whose cache read fell well below the previous reply’s context while the context did not shrink.</li>
+      <li>Subscription plans meter usage their own way and do not publish it, so treat these numbers as a guide, not your plan’s meter.</li>
+    </ul>
+    <div class="links">
+      <a href="https://github.com/tecyfyai/reread" target="_blank" rel="noopener noreferrer">ReRead on GitHub</a>
+      <a href="https://tecyfy.com/ai-agents/prompt-caching-calculator" target="_blank" rel="noopener noreferrer">What caching saves for your own prompt</a>
+    </div>
+    <p id="made" style="margin:0"></p>
+    <p style="margin:4px 0 0">ReRead is independent and not made, endorsed or supported by Anthropic.</p>
+  </div>
+</footer>
+
+<script id="reread-data" type="application/json">__REREAD_DATA__</script>
+<script>
+(() => {
+  'use strict'
+
+  // ---------- small DOM helpers (every string from the data goes in as text, never as HTML) ----------
+  const SVGNS = 'http://www.w3.org/2000/svg'
+  function el(tag, props, ...kids) {
+    const n = document.createElement(tag)
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue
+      if (k === 'class') n.className = v
+      else if (k === 'text') n.textContent = v
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2).toLowerCase(), v)
+      else n.setAttribute(k, v === true ? '' : String(v))
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) n.append(c instanceof Node ? c : String(c))
+    return n
+  }
+  function sv(tag, attrs, ...kids) {
+    const n = document.createElementNS(SVGNS, tag)
+    for (const [k, v] of Object.entries(attrs || {})) if (v != null) n.setAttribute(k, String(v))
+    for (const c of kids.flat()) if (c != null && c !== false) n.append(c instanceof Node ? c : String(c))
+    return n
+  }
+  const $ = (id) => document.getElementById(id)
+
+  // ---------- data ----------
+  let raw = null
+  try { raw = JSON.parse($('reread-data').textContent) } catch { raw = null }
+  if (!raw || typeof raw !== 'object' || !raw.summary) {
+    $('app').replaceChildren(el('div', { class: 'empty-page' },
+      el('h1', { text: 'No data in this report' }),
+      el('p', { class: 'muted', text: 'This is ReRead’s report template. Run npx reread-cli in a terminal to make a report from your own Claude Code, Codex or Antigravity sessions.' })))
+    for (const id of ['hide-names', 'export-json', 'export-csv']) $(id).disabled = true
+    return
+  }
+  const arr = (v) => (Array.isArray(v) ? v : [])
+  const N = (v) => (Number.isFinite(+v) ? +v : 0)
+  const S = (v) => (v == null ? '' : String(v))
+  const sm = raw.summary || {}
+  const D = {
+    version: S(raw.version), generatedAt: S(raw.generatedAt), span: S(raw.span) || 'your sessions', anon: !!raw.anon,
+    daily: arr(raw.daily), buckets: arr(raw.buckets), models: arr(raw.models), projects: arr(raw.projects),
+    sessions: arr(raw.sessions), findings: arr(raw.findings), share: S(raw.share),
+    product: S(raw.product) || 'Claude Code', tools: arr(raw.tools),
+  }
+  const REASONS = ['cold', 'model', 'prefix']
+  const rebuild = (k) => { const r = (sm.rebuilds || {})[k] || {}; return { count: N(r.count), usd: N(r.usd), share: N(r.share) } }
+  const shares = {
+    reread: N(sm.rereadShare), read: N(sm.cacheReadShare), rebuild: N(sm.rebuildShare),
+    other: sm.otherShare != null ? N(sm.otherShare) : Math.max(0, 100 - N(sm.rereadShare)),
+  }
+
+  // ---------- formatting ----------
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const pad2 = (n) => String(n).padStart(2, '0')
+  const int = (n) => Math.round(N(n)).toLocaleString('en-US')
+  const trim0 = (s) => s.replace(/\.0$/, '')
+  function tok(n) {
+    n = N(n)
+    if (n >= 1e9) return trim0((n / 1e9).toFixed(1)) + 'B'
+    if (n >= 1e6) return trim0((n / 1e6).toFixed(n >= 1e8 ? 0 : 1)) + 'M'
+    if (n >= 1e4) return Math.round(n / 1e3) + 'k'
+    if (n >= 1e3) return trim0((n / 1e3).toFixed(1)) + 'k'
+    return String(Math.round(n))
+  }
+  function usd(v) {
+    v = N(v)
+    if (v === 0) return '$0'
+    const a = Math.abs(v), sign = v < 0 ? '−' : ''
+    if (a < 0.01) return '<$0.01'
+    if (a >= 100) return sign + '$' + Math.round(a).toLocaleString('en-US')
+    return sign + '$' + a.toFixed(2)
+  }
+  function usdAxis(v) {
+    if (v >= 1e6) return '$' + trim0((v / 1e6).toFixed(1)) + 'M'
+    if (v >= 1e4) return '$' + Math.round(v / 1e3) + 'k'
+    if (v >= 1e3) return '$' + trim0((v / 1e3).toFixed(1)) + 'k'
+    if (v >= 10 || v === 0) return '$' + Math.round(v)
+    return '$' + trim0(v.toFixed(v < 1 ? 2 : 1))
+  }
+  const pct = (v, d = 1) => N(v).toFixed(d) + '%'
+  const share = (a, b) => (b > 0 ? (100 * a) / b : 0)
+  const plural = (n, one, many) => `${int(n)} ${n === 1 ? one : many}`
+  function parseDay(d) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(S(d)); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null }
+  const dayShort = (d) => { const t = parseDay(d); return t ? `${MON[t.getMonth()]} ${t.getDate()}` : S(d) }
+  const dayLong = (d) => { const t = parseDay(d); return t ? `${DOW[t.getDay()]}, ${MON[t.getMonth()]} ${t.getDate()}, ${t.getFullYear()}` : S(d) }
+  function when(iso) {
+    const t = new Date(typeof iso === 'number' ? iso : S(iso))
+    return isNaN(t) ? '—' : `${MON[t.getMonth()]} ${t.getDate()}, ${pad2(t.getHours())}:${pad2(t.getMinutes())}`
+  }
+  function clock(ms) { const t = new Date(ms); return isNaN(t) ? '—' : `${pad2(t.getHours())}:${pad2(t.getMinutes())}:${pad2(t.getSeconds())}` }
+  function duration(ms) {
+    if (!(ms > 0)) return '—'
+    const m = Math.round(ms / 60000)
+    if (m < 1) return '<1 min'
+    if (m < 60) return `${m} min`
+    const h = Math.floor(m / 60)
+    if (h < 24) return m % 60 ? `${h} h ${m % 60} min` : `${h} h`
+    return `${Math.floor(h / 24)} d ${h % 24} h`
+  }
+  function niceTicks(max, count = 4) {
+    if (!(max > 0)) max = 1
+    const rough = max / count, p = Math.pow(10, Math.floor(Math.log10(rough))), f = rough / p
+    const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p
+    const out = []
+    for (let i = 0; i <= count * 3; i++) { const v = +(i * step).toPrecision(12); out.push(v); if (v >= max) break }
+    return out
+  }
+
+  // ---------- names ----------
+  const store = {
+    get(k) { try { return window.localStorage.getItem(k) } catch { return null } },
+    set(k, v) { try { window.localStorage.setItem(k, v) } catch { /* private window or blocked storage */ } },
+  }
+  const state = {
+    hide: !D.anon && store.get('reread.hideNames') === '1',
+    sort: { key: 'usd', dir: -1 }, filter: '', open: null,
+  }
+  const projectAlias = new Map(), branchAlias = new Map()
+  for (const p of D.projects) { const k = S(p.project); if (!projectAlias.has(k)) projectAlias.set(k, `project ${projectAlias.size + 1}`) }
+  for (const s of D.sessions) {
+    const k = S(s.project); if (!projectAlias.has(k)) projectAlias.set(k, `project ${projectAlias.size + 1}`)
+    const b = S(s.branch); if (b && !branchAlias.has(b)) branchAlias.set(b, `branch ${branchAlias.size + 1}`)
+  }
+  const pname = (p) => { p = S(p); return state.hide ? projectAlias.get(p) || 'project' : p || '(unknown folder)' }
+  const bname = (b) => { b = S(b); return !b ? '—' : state.hide ? branchAlias.get(b) || 'branch' : b }
+
+  // ---------- marks (one shape per reason, the same everywhere) ----------
+  const REASON = {
+    cold: { name: 'Cache went cold', flag: 1, exp: 'A break longer than the cache’s life (5 minutes, or 1 hour when the longer cache was used). The next reply wrote the whole history again.' },
+    model: { name: 'Model changed mid-session', flag: 2, exp: 'Each model keeps its own cache, so the first reply on the new model wrote the whole history again.' },
+    prefix: { name: 'Early context changed', flag: 3, exp: 'Something near the start changed while the cache was warm (tools, MCP servers, settings), so everything after it was written again.' },
+  }
+  function mark(kind, cx, cy, r = 4.5) {
+    const ring = { stroke: 'var(--surface)', 'stroke-width': 2, 'paint-order': 'stroke' }
+    if (kind === 'cold') return sv('circle', { cx, cy, r, fill: 'var(--rebuild)', ...ring })
+    if (kind === 'model') { const d = r * 1.35; return sv('path', { d: `M${cx},${cy - d}L${cx + d},${cy}L${cx},${cy + d}L${cx - d},${cy}Z`, fill: 'var(--rebuild)', ...ring }) }
+    if (kind === 'prefix') { const d = r * 1.3; return sv('path', { d: `M${cx},${cy - d}L${cx + d},${cy + d * 0.8}L${cx - d},${cy + d * 0.8}Z`, fill: 'var(--rebuild)', ...ring }) }
+    const d = r * 0.85
+    return sv('rect', { x: cx - d, y: cy - d, width: 2 * d, height: 2 * d, fill: 'var(--surface)', stroke: 'var(--shrink)', 'stroke-width': 1.75 })
+  }
+  const markIcon = (kind) => sv('svg', { viewBox: '0 0 16 16', 'aria-hidden': 'true' }, mark(kind, 8, 8, 4.6))
+
+  // ---------- tooltip ----------
+  function tipRow(sw, k, v) { return el('div', { class: 'r' }, sw ? el('i', { class: `sw ${sw}` }) : null, el('span', { class: 'k', text: k }), el('span', { text: v })) }
+  function placeTip(tip, box, x, y) {
+    tip.hidden = false
+    // Beside the point, so the tip never covers the mark it describes; flips left near the right edge.
+    const bw = box.clientWidth, bh = box.clientHeight, tw = tip.offsetWidth, th = tip.offsetHeight
+    const right = x + 14 + tw <= bw
+    tip.style.left = Math.max(0, right ? x + 14 : x - 14 - tw) + 'px'
+    tip.style.top = Math.max(0, Math.min(bh - th, y - th / 2)) + 'px'
+  }
+
+  // Redraw a chart when its box changes width.
+  function onWidth(node, draw) {
+    let last = 0
+    const run = () => { const w = node.clientWidth; if (w && w !== last) { last = w; draw(w) } }
+    if ('ResizeObserver' in window) new ResizeObserver(run).observe(node)
+    else window.addEventListener('resize', run)
+    run()
+  }
+
+  // ---------- header ----------
+  function renderHeader() {
+    $('ver').textContent = D.version ? `v${D.version}` : ''
+    document.title = `ReRead · ${Math.round(shares.reread)}% re-reading`
+    $('hero-pct').textContent = `${Math.round(shares.reread)}%`
+    $('hero-words').textContent = `of your ${D.product} usage was re\u2011reading context`
+    const meta = $('meta')
+    // With more than one tool, what each one cost and how much of it was re-reading.
+    const byTool = D.tools.length > 1
+      ? D.tools.flatMap((t) => [' · ', el('b', { text: S(t.name) }), ` ${usd(t.usd)}, ${pct(t.rereadShare, 0)} re-read`])
+      : []
+    meta.replaceChildren(
+      el('span', { text: D.span }), ' · ',
+      el('b', { text: int(sm.sessions) }), ` ${N(sm.sessions) === 1 ? 'session' : 'sessions'} · `,
+      el('b', { text: int(sm.calls) }), ` ${N(sm.calls) === 1 ? 'reply' : 'replies'} · `,
+      el('b', { text: usd(sm.apiEquivalentUSD) }), ' at API prices', ...byTool)
+    const parts = [
+      ['read', shares.read, 'Reading history from the cache', 'the history each reply sends again, at the cache price'],
+      ['rebuild', shares.rebuild, 'Writing history again', 'after the cache was lost, at the cache-write price'],
+      ['other', shares.other, 'Everything else', 'new input, first cache writes, output'],
+    ]
+    const bar = $('split-bar')
+    bar.setAttribute('aria-label', parts.map(([, v, l]) => `${l} ${pct(v)}`).join(', '))
+    bar.replaceChildren(...parts.filter(([, v]) => v > 0).map(([c, v]) => el('span', { style: `flex:${v} 1 0;background:var(--${c})` })))
+    $('split-legend').replaceChildren(...parts.map(([c, v, l, d]) => el('div', { class: 'leg' },
+      el('i', { class: `sw ${c}` }),
+      el('div', null, el('div', { class: 'v', text: pct(v) }), el('div', { class: 'l', text: l })),
+      el('div', { class: 'd', text: d }))))
+    $('split-note').replaceChildren(el('b', { text: pct(sm.tokensReadFromCache) }), ' of all tokens read came from the cache. Cache reads are cheap per token, but every reply in a long session pays for the whole history again.')
+    const made = new Date(D.generatedAt)
+    $('made').textContent = `Report made ${isNaN(made) ? '' : when(made.getTime()) + ', '}by ReRead${D.version ? ' ' + D.version : ''} from the session files on this machine.`
+  }
+
+  // ---------- daily chart ----------
+  function renderDaily() {
+    const box = $('daily')
+    const days = D.daily.map((d) => {
+      const total = N(d.usd), read = Math.min(N(d.readUsd), total), reb = Math.min(N(d.rebuildUsd), Math.max(0, total - read))
+      return { day: S(d.day), calls: N(d.calls), total, read, reb, other: Math.max(0, total - read - reb) }
+    })
+    if (!days.length || !days.some((d) => d.total > 0)) { box.replaceChildren(el('p', { class: 'empty', text: 'No replies in this span.' })); return }
+    const chart = el('div', { class: 'chart chart-focus', tabindex: 0, role: 'group',
+      'aria-label': 'Cost per day. Use the left and right arrow keys to read each day.' })
+    const tip = el('div', { class: 'tip', hidden: true, 'aria-live': 'polite' })
+    const table = el('details', { class: 'table-view' }, el('summary', { text: 'Show as a table' }),
+      el('div', { class: 'tbl-scroll' }, el('table', { class: 'tbl' },
+        el('thead', null, el('tr', null, ['Day', 'Replies', 'Cost', 'Cache reads', 'Written again', 'Re-reading'].map((t, i) => el('th', { class: i ? 'num' : null, text: t })))),
+        el('tbody', null, days.map((d) => el('tr', null,
+          el('td', { text: dayLong(d.day) }), el('td', { class: 'num', text: int(d.calls) }), el('td', { class: 'num', text: usd(d.total) }),
+          el('td', { class: 'num', text: usd(d.read) }), el('td', { class: 'num', text: usd(d.reb) }),
+          el('td', { class: 'num', text: d.total ? pct(share(d.read + d.reb, d.total), 0) : '—' })))))))
+    box.replaceChildren(chart, table)
+    let active = -1, geo = null
+
+    function show(i) {
+      if (!geo || i < 0) return
+      active = i
+      const d = days[i]
+      geo.hl.setAttribute('x', geo.x(i)); geo.hl.setAttribute('width', geo.band); geo.hl.style.display = ''
+      tip.replaceChildren(
+        el('div', { class: 't', text: dayLong(d.day) }),
+        tipRow(null, 'Cost', usd(d.total)),
+        tipRow('read', 'Cache reads', usd(d.read)),
+        tipRow('rebuild', 'Written again', usd(d.reb)),
+        tipRow('other', 'Everything else', usd(d.other)),
+        el('div', { class: 'what' }, tipRow(null, 'Re-reading', d.total ? pct(share(d.read + d.reb, d.total), 0) : '—'), tipRow(null, 'Replies', int(d.calls))))
+      placeTip(tip, chart, geo.x(i) + geo.band / 2, geo.top(i))
+    }
+    function hide() { active = -1; tip.hidden = true; if (geo) geo.hl.style.display = 'none' }
+
+    function draw(W) {
+      const H = W < 520 ? 190 : 230, m = { l: 44, r: 4, t: 10, b: 24 }
+      const iw = W - m.l - m.r, ih = H - m.t - m.b, n = days.length
+      const ticks = niceTicks(Math.max(...days.map((d) => d.total))), ymax = ticks[ticks.length - 1]
+      const band = iw / n, bw = n === 1 ? Math.min(band * 0.4, 64) : Math.max(1.5, Math.min(band * 0.72, 36))
+      const x = (i) => m.l + i * band, y = (v) => m.t + ih - (v / ymax) * ih
+      const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, 'aria-hidden': 'true' })
+      const axis = sv('g', { class: 'axis' })
+      for (const t of ticks) {
+        axis.append(sv('line', { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), class: t === 0 ? 'base' : null }))
+        axis.append(sv('text', { x: m.l - 8, y: y(t) + 4, 'text-anchor': 'end' }, usdAxis(t)))
+      }
+      const every = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(iw / 56))))
+      for (let i = 0; i < n; i += every) axis.append(sv('text', { x: x(i) + band / 2, y: H - 6, 'text-anchor': 'middle' }, dayShort(days[i].day)))
+      const hl = sv('rect', { class: 'hl', y: m.t, height: ih, rx: 3, style: 'display:none' })
+      svg.append(hl, axis)
+      const bars = sv('g')
+      days.forEach((d, i) => {
+        const bx = x(i) + (band - bw) / 2
+        let base = y(0)
+        const segs = [['read', d.read], ['rebuild', d.reb], ['other', d.other]].filter(([, v]) => v > 0)
+        segs.forEach(([c, v], k) => {
+          const h = (v / ymax) * ih, gap = k > 0 && h > 2 ? 1 : 0, top = base - h
+          const r = k === segs.length - 1 ? Math.min(3, bw / 2, h) : 0
+          const d2 = `M${bx},${base - gap}V${top + r}${r ? `Q${bx},${top} ${bx + r},${top}` : ''}H${bx + bw - r}${r ? `Q${bx + bw},${top} ${bx + bw},${top + r}` : ''}V${base - gap}Z`
+          bars.append(sv('path', { d: d2, fill: `var(--${c})` }))
+          base = top
+        })
+      })
+      svg.append(bars)
+      const hit = sv('g')
+      days.forEach((d, i) => {
+        const r = sv('rect', { x: x(i), y: m.t, width: band, height: ih + m.b, fill: 'transparent' })
+        r.addEventListener('pointerenter', () => show(i))
+        hit.append(r)
+      })
+      svg.addEventListener('pointerleave', () => { if (document.activeElement !== chart) hide() })
+      svg.append(hit)
+      chart.replaceChildren(svg, tip)
+      geo = { x, band, hl, top: (i) => y(days[i].total) }
+      if (active >= 0) show(active)
+    }
+    chart.addEventListener('keydown', (e) => {
+      const last = days.length - 1
+      let i = active
+      if (e.key === 'ArrowRight') i = Math.min(last, i < 0 ? last : i + 1)
+      else if (e.key === 'ArrowLeft') i = Math.max(0, i < 0 ? last : i - 1)
+      else if (e.key === 'Home') i = 0
+      else if (e.key === 'End') i = last
+      else if (e.key === 'Escape') { hide(); return }
+      else return
+      e.preventDefault(); show(i)
+    })
+    chart.addEventListener('focus', () => { if (active < 0) { let i = days.length - 1; while (i > 0 && !days[i].total) i--; show(i) } })
+    chart.addEventListener('blur', hide)
+    onWidth(chart, draw)
+  }
+
+  // ---------- context size ----------
+  function renderBuckets() {
+    const box = $('buckets')
+    const rows = D.buckets.map((b) => ({ label: S(b.label), calls: N(b.calls), usd: N(b.usd), read: Math.min(N(b.readUsd), N(b.usd)) })).filter((b) => b.calls || b.usd)
+    if (!rows.length) { box.replaceChildren(el('p', { class: 'empty', text: 'No replies to group.' })); return }
+    const total = rows.reduce((a, b) => a + b.usd, 0), max = Math.max(...rows.map((b) => b.usd), 1e-9)
+    // A label's lower bound, with the first unit in it: "150–200k" → 150k, "500k+" → 500k, "1M+" → 1M.
+    const isLong = (l) => { const n = parseFloat(l), u = (/[kKmM]/.exec(l) || [''])[0].toLowerCase(); return n * (u === 'm' ? 1e6 : u === 'k' ? 1e3 : 1) >= 150e3 }
+    const lead = el('p', { class: 'lead' }, 'Replies over 150k tokens of context made ', el('b', { text: pct(sm.longContextShare, 0) }), ' of usage.')
+    const grid = el('div', { class: 'hbars', role: 'list' })
+    for (const b of rows) {
+      const long = isLong(b.label)
+      grid.append(
+        el('span', { class: 'lbl' + (long ? ' long' : ''), text: b.label }),
+        el('span', { class: 'track', role: 'img', 'aria-label': `${b.label}: ${usd(b.usd)}, of which cache reads ${usd(b.read)}, ${plural(b.calls, 'reply', 'replies')}` },
+          b.read > 0 ? el('span', { style: `width:${(100 * b.read) / max}%;background:var(--read)` }) : null,
+          b.usd - b.read > 0 ? el('span', { style: `width:${(100 * (b.usd - b.read)) / max}%;background:var(--other)` }) : null),
+        el('span', { class: 'val' }, usd(b.usd), el('span', { class: 'muted', text: pct(share(b.usd, total), 0) })))
+    }
+    const legend = el('div', { class: 'chart-legend', style: 'margin:14px 0 0' },
+      el('span', null, el('i', { class: 'sw read' }), 'Cache reads'),
+      el('span', null, el('i', { class: 'sw other' }), 'Everything else in those replies'))
+    box.replaceChildren(lead, grid, legend)
+  }
+
+  // ---------- why the cache was lost ----------
+  function renderWhy() {
+    const box = $('why')
+    const rs = REASONS.map((k) => ({ k, ...rebuild(k) }))
+    const count = rs.reduce((a, r) => a + r.count, 0), cost = rs.reduce((a, r) => a + r.usd, 0)
+    if (!count) { box.replaceChildren(el('p', { class: 'empty', text: 'The cache was never lost in this span. Nothing was written again.' })); return }
+    const lead = el('p', { class: 'lead' }, 'History was written again ', el('b', { text: plural(count, 'time', 'times') }), ', costing ',
+      el('b', { text: usd(cost) }), ` (${pct(shares.rebuild)} of usage).`)
+    const list = el('ul', { class: 'why' }, rs.map((r) => el('li', null,
+      markIcon(r.k),
+      el('div', { class: 'name', text: REASON[r.k].name }),
+      el('div', { class: 'nums' }, el('div', { class: 'usd', text: usd(r.usd) }),
+        el('span', { class: 'muted', text: `${plural(r.count, 'time', 'times')} · ${pct(r.share)}` })),
+      el('div', { class: 'exp', text: REASON[r.k].exp }))))
+    box.replaceChildren(lead, list)
+  }
+
+  // ---------- projects and models ----------
+  function minibar(parts, label) {
+    const t = el('span', { class: 'track', 'aria-hidden': 'true' })
+    for (const [c, v] of parts) if (v > 0) t.append(el('span', { style: `width:${Math.min(100, v)}%;background:var(--${c})` }))
+    return el('span', { class: 'minibar' }, t, el('span', { text: label }))
+  }
+  function simpleTable(head, rows) {
+    return el('div', { class: 'tbl-scroll' }, el('table', { class: 'tbl' },
+      el('thead', null, el('tr', null, head.map(([t, num, opt]) => el('th', { class: [num ? 'num' : '', opt ? 'opt' : ''].join(' ').trim() || null, scope: 'col', text: t })))),
+      el('tbody', null, rows)))
+  }
+  function renderProjects() {
+    const box = $('projects')
+    if (!D.projects.length) { box.replaceChildren(el('p', { class: 'empty', text: 'No projects.' })); return }
+    const shown = state.allProjects ? D.projects : D.projects.slice(0, 6)
+    const rows = shown.map((p) => el('tr', null,
+      el('td', { class: 'name', title: pname(p.project), text: pname(p.project) }),
+      el('td', { class: 'num', text: int(p.sessions) }),
+      el('td', { class: 'num opt', text: int(p.calls) }),
+      el('td', { class: 'num', text: usd(p.usd) }),
+      el('td', { class: 'num' }, minibar([['read', N(p.rereadShare)]], pct(p.rereadShare, 0)))))
+    const more = D.projects.length > 6 ? el('button', { type: 'button', class: 'btn show-all', onclick: () => { state.allProjects = !state.allProjects; renderProjects() },
+      text: state.allProjects ? 'Show fewer' : `Show all ${int(D.projects.length)} projects` }) : null
+    box.replaceChildren(simpleTable([['Project'], ['Sessions', 1], ['Replies', 1, 1], ['Cost', 1], ['Re-reading', 1]], rows), more || '')
+  }
+  function renderModels() {
+    const box = $('models')
+    if (!D.models.length) { box.replaceChildren(el('p', { class: 'empty', text: 'No models.' })); return }
+    const rows = D.models.map((m) => {
+      const u = N(m.usd), r = share(N(m.readUsd), u), b = share(N(m.rebuildUsd), u)
+      return el('tr', null,
+        el('td', { class: 'name mono', title: S(m.model), text: S(m.model) || '(unknown)' }),
+        el('td', { class: 'num opt', text: int(m.calls) }),
+        el('td', { class: 'num', text: usd(u) }),
+        el('td', { class: 'num' }, minibar([['read', r], ['rebuild', b]], pct(r + b, 0))))
+    })
+    box.replaceChildren(simpleTable([['Model'], ['Replies', 1, 1], ['Cost', 1], ['Re-reading', 1]], rows),
+      el('div', { class: 'chart-legend', style: 'margin:12px 0 0' },
+        el('span', null, el('i', { class: 'sw read' }), 'Cache reads'),
+        el('span', null, el('i', { class: 'sw rebuild' }), 'Written again')))
+  }
+
+  // ---------- sessions ----------
+  const rebuildsOf = (s) => { const r = s.rebuilds || {}; return { cold: N(r.cold), model: N(r.model), prefix: N(r.prefix) } }
+  const rebuildTotal = (s) => { const r = rebuildsOf(s); return r.cold + r.model + r.prefix }
+  const COLS = [
+    { key: 'started', label: 'Started', get: (s) => Date.parse(S(s.started)) || 0 },
+    { key: 'project', label: 'Project', text: true, get: (s) => pname(s.project).toLowerCase() },
+    { key: 'branch', label: 'Branch', text: true, get: (s) => bname(s.branch).toLowerCase() },
+    { key: 'calls', label: 'Replies', num: true, get: (s) => N(s.calls) },
+    { key: 'peak', label: 'Peak context', num: true, get: (s) => N(s.peak) },
+    { key: 'usd', label: 'Cost', num: true, get: (s) => N(s.usd) },
+    { key: 'rereadShare', label: 'Re-read', num: true, get: (s) => N(s.rereadShare) },
+    { key: 'rebuilds', label: 'Rebuilds', num: true, get: rebuildTotal },
+  ]
+  const sessionKey = (s, i) => `${S(s.id)}#${i}`
+  const SESSIONS = D.sessions.map((s, i) => ({ s, key: sessionKey(s, i) }))
+  let scrollObserver = null
+
+  function renderSessions() {
+    const scroll = $('sessions-scroll')
+    if (!SESSIONS.length) {
+      scroll.replaceChildren(el('p', { class: 'empty', text: 'No sessions in this span.' }))
+      $('filter').disabled = true
+      return
+    }
+    const q = state.filter.trim().toLowerCase()
+    const col = COLS.find((c) => c.key === state.sort.key) || COLS[5]
+    const list = SESSIONS.filter(({ s }) => !q || [pname(s.project), bname(s.branch), S(s.id)].some((t) => t.toLowerCase().includes(q)))
+      .sort((a, b) => {
+        const x = col.get(a.s), y = col.get(b.s)
+        return (x < y ? -1 : x > y ? 1 : 0) * state.sort.dir || N(b.s.usd) - N(a.s.usd)
+      })
+    const head = el('tr', null, COLS.map((c) => {
+      const sorted = state.sort.key === c.key
+      return el('th', { class: c.num ? 'num' : null, scope: 'col', 'aria-sort': sorted ? (state.sort.dir > 0 ? 'ascending' : 'descending') : null },
+        el('button', { type: 'button', class: 'sort', onclick: () => {
+          state.sort = sorted ? { key: c.key, dir: -state.sort.dir } : { key: c.key, dir: c.text ? 1 : -1 }
+          renderSessions()
+          const btn = document.querySelector(`#sessions th[data-k="${c.key}"] button`)
+          if (btn) btn.focus()
+        } }, c.num ? el('span', { class: 'arrow', 'aria-hidden': 'true', text: sorted && state.sort.dir > 0 ? '↑' : '↓' }) : null,
+        c.label, c.num ? null : el('span', { class: 'arrow', 'aria-hidden': 'true', text: sorted && state.sort.dir > 0 ? '↑' : '↓' })))
+    }))
+    head.querySelectorAll('th').forEach((th, i) => th.setAttribute('data-k', COLS[i].key))
+    const body = el('tbody')
+    // The 10 costliest by default; a filter or "Show all" lists every match.
+    const LIMIT = 10, cut = !q && !state.allSessions && list.length > LIMIT
+    for (const { s, key } of cut ? list.slice(0, LIMIT) : list) {
+      const open = state.open === key
+      const r = rebuildsOf(s)
+      const toggle = () => { state.open = open ? null : key; renderSessions(); const row = document.querySelector(`#sessions tr[data-key="${CSS.escape(key)}"]`); if (row) row.focus() }
+      const tr = el('tr', { class: 'srow', tabindex: 0, 'aria-expanded': open ? 'true' : 'false', 'data-key': key,
+        'aria-label': `Session ${S(s.id)}, ${pname(s.project)}, ${usd(s.usd)}. ${open ? 'Hide' : 'Show'} its context chart.`,
+        onclick: toggle,
+        onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } } },
+        el('td', null, el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }), ' ', when(s.started), el('span', { class: 'sid', text: S(s.id) })),
+        el('td', { class: 'name', title: pname(s.project), text: pname(s.project) }),
+        el('td', { class: 'name mono', title: bname(s.branch), text: bname(s.branch), style: 'font-size:12px' }),
+        el('td', { class: 'num', text: int(s.calls) }),
+        el('td', { class: 'num', text: tok(s.peak) }),
+        el('td', { class: 'num', text: usd(s.usd) }),
+        el('td', { class: 'num' }, minibar([['read', N(s.rereadShare)]], pct(s.rereadShare, 0))),
+        el('td', { class: 'num' }, rebuildTotal(s)
+          ? el('span', { class: 'reb', title: `cold ${r.cold} · model ${r.model} · early context ${r.prefix}` },
+            REASONS.filter((k) => r[k]).map((k) => el('span', null, markIcon(k), String(r[k]))))
+          : el('span', { class: 'muted', text: '0' })))
+      body.append(tr)
+      if (open) body.append(drillRow(s))
+    }
+    if (!list.length) body.append(el('tr', null, el('td', { colspan: COLS.length, class: 'empty', text: 'No session matches that filter.' })))
+    scroll.replaceChildren(el('table', { class: 'tbl' }, el('thead', null, head), body))
+    const total = N(sm.sessions)
+    const moreBox = $('sessions-more')
+    moreBox.textContent = (q ? `${plural(list.length, 'session', 'sessions')} match. ` : '') +
+      (!q && total > SESSIONS.length ? `The report keeps the ${int(SESSIONS.length)} costliest of ${plural(total, 'session', 'sessions')}. ` : '')
+    if (!q && list.length > LIMIT) moreBox.prepend(el('button', { type: 'button', class: 'btn show-all', style: 'margin:0 12px 0 0',
+      onclick: () => { state.allSessions = !state.allSessions; renderSessions() },
+      text: state.allSessions ? 'Show the 10 costliest' : `Show all ${int(list.length)} sessions` }))
+    fitDrill()
+  }
+  function fitDrill() {
+    const scroll = $('sessions-scroll'), inner = scroll.querySelector('.drill-inner')
+    if (!inner) return
+    const cs = getComputedStyle(scroll)
+    inner.style.width = scroll.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) + 'px'
+  }
+
+  const WHAT = {
+    0: 'Read the history from the cache',
+    1: 'Cache went cold: history written again',
+    2: 'Model changed: history written again',
+    3: 'Early context changed: history written again',
+    4: 'Context shrank (compaction or /clear)',
+  }
+  function drillRow(s) {
+    const pts = arr(s.points).filter(Array.isArray).map((p) => ({ ts: N(p[0]), ctx: N(p[1]), read: Math.min(N(p[2]), N(p[1])), flag: N(p[3]) }))
+    const r = rebuildsOf(s)
+    const shrinks = pts.filter((p) => p.flag === 4).length
+    const start = Date.parse(S(s.started)), end = Date.parse(S(s.ended))
+    const stats = el('dl', { class: 'stats' },
+      el('dt', { text: 'Started' }), el('dd', { text: when(s.started) }),
+      el('dt', { text: 'Ran for' }), el('dd', { text: duration(end - start) }),
+      el('dt', { text: 'Replies' }), el('dd', { text: int(s.calls) }),
+      el('dt', { text: 'Peak context' }), el('dd', { text: tok(s.peak) }),
+      el('dt', { text: 'Cost at API prices' }), el('dd', { text: usd(s.usd) }),
+      el('dt', { text: 'Re-reading' }), el('dd', { text: pct(s.rereadShare) }),
+      el('div', { class: 'sep' }),
+      ...REASONS.flatMap((k) => [el('dt', null, el('span', { class: 'reb', style: 'justify-content:flex-start' }, markIcon(k), REASON[k].name)), el('dd', { text: int(r[k]) })]),
+      el('dt', null, el('span', { class: 'reb', style: 'justify-content:flex-start' }, markIcon('shrink'), 'Context shrank')), el('dd', { text: int(shrinks) }))
+    const chartBox = el('div', { class: 'chart chart-focus', tabindex: 0, role: 'group',
+      'aria-label': 'Context per reply. Use the left and right arrow keys to read each reply.' })
+    const legend = el('div', { class: 'chart-legend', 'aria-hidden': 'true' },
+      el('span', null, sv('svg', { viewBox: '0 0 14 14' }, sv('rect', { x: 1, y: 3, width: 12, height: 9, fill: 'var(--other)', 'fill-opacity': 0.35 }), sv('path', { d: 'M1 3.5h12', stroke: 'var(--text-2)', 'stroke-width': 1.5 })), 'Context sent'),
+      el('span', null, el('i', { class: 'sw read' }), 'Read from the cache'),
+      ...REASONS.map((k) => el('span', null, markIcon(k), REASON[k].name)),
+      el('span', null, markIcon('shrink'), 'Context shrank'))
+    const fine = pts.length && N(s.calls) > pts.length ? el('p', { class: 'fine', text: `Shown at ${int(pts.length)} of ${int(s.calls)} replies; every rebuild and shrink is kept.` }) : null
+    const inner = el('div', { class: 'drill-inner' },
+      el('div', { class: 'drill-head' }, el('b', { text: pname(s.project) }), el('span', { class: 'mono', text: bname(s.branch) }), el('span', { class: 'mono muted', text: S(s.id) })),
+      el('div', { class: 'drill-grid drill' }, el('div', null, legend, chartBox, fine), stats))
+    const row = el('tr', { class: 'drill' }, el('td', { colspan: COLS.length }, inner))
+    requestAnimationFrame(() => {
+      fitDrill()
+      if (!pts.length) { chartBox.replaceChildren(el('p', { class: 'empty', text: 'No reply-by-reply data for this session.' })); return }
+      sessionChart(chartBox, pts, N(s.calls))
+    })
+    return row
+  }
+
+  function sessionChart(box, pts, calls) {
+    const tip = el('div', { class: 'tip', hidden: true, 'aria-live': 'polite' })
+    const n = pts.length, total = Math.max(calls, n), sampled = total > n
+    const replyNo = (i) => (n === 1 ? 1 : Math.round(1 + (i * (total - 1)) / (n - 1)))
+    let active = -1, geo = null
+    function show(i) {
+      if (!geo) return
+      active = i
+      const p = pts[i], prev = pts[i - 1]
+      const cx = geo.x(i)
+      geo.cross.setAttribute('x1', cx); geo.cross.setAttribute('x2', cx); geo.cross.style.display = ''
+      geo.dot.setAttribute('cx', cx); geo.dot.setAttribute('cy', geo.y(p.ctx)); geo.dot.style.display = ''
+      const gap = !sampled && prev && p.ts - prev.ts >= 60e3 ? ` · ${duration(p.ts - prev.ts)} after the last reply` : ''
+      tip.replaceChildren(
+        el('div', { class: 't', text: `${sampled ? '≈ ' : ''}Reply ${int(replyNo(i))} of ${int(total)}` }),
+        el('div', { class: 'r' }, el('span', { class: 'k', text: clock(p.ts) + gap })),
+        tipRow('other', 'Context', tok(p.ctx)),
+        tipRow('read', 'Read from cache', `${tok(p.read)}${p.ctx ? ` (${p.read < p.ctx ? Math.min(99, Math.round(share(p.read, p.ctx))) : 100}%)` : ''}`),
+        el('div', { class: 'what' }, el('span', { text: WHAT[p.flag] && p.flag ? WHAT[p.flag] : p.read < p.ctx * 0.5 ? 'Mostly new context' : WHAT[0] })))
+      placeTip(tip, box, cx, geo.y(p.ctx))
+    }
+    function hide() { active = -1; tip.hidden = true; if (geo) { geo.cross.style.display = 'none'; geo.dot.style.display = 'none' } }
+    function draw(W) {
+      const H = W < 520 ? 200 : 240, m = { l: 40, r: 10, t: 12, b: 26 }
+      const iw = W - m.l - m.r, ih = H - m.t - m.b
+      const peak = Math.max(1, ...pts.map((p) => p.ctx)), guide = peak >= 100e3
+      const ticks = niceTicks(Math.max(peak, guide ? 150e3 : 0) * 1.04), ymax = ticks[ticks.length - 1]
+      const x = (i) => m.l + (n === 1 ? iw / 2 : (i * iw) / (n - 1)), y = (v) => m.t + ih - (v / ymax) * ih
+      const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, 'aria-hidden': 'true' })
+      const axis = sv('g', { class: 'axis' })
+      for (const t of ticks) {
+        axis.append(sv('line', { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), class: t === 0 ? 'base' : null }))
+        axis.append(sv('text', { x: m.l - 6, y: y(t) + 4, 'text-anchor': 'end' }, tok(t)))
+      }
+      const xt = n === 1 ? [0] : [...new Set([0, Math.round((n - 1) / 2), n - 1])]
+      xt.forEach((i, k) => axis.append(sv('text', { x: x(i), y: H - 6, 'text-anchor': n === 1 ? 'middle' : k === 0 ? 'start' : k === xt.length - 1 ? 'end' : 'middle' },
+        `${k === 0 && n > 1 ? 'reply ' : ''}${int(replyNo(i))}`)))
+      svg.append(axis)
+      const base = y(0)
+      const area = (f) => n === 1 ? '' : `M${x(0)},${base}` + pts.map((p, i) => `L${x(i).toFixed(1)},${y(f(p)).toFixed(1)}`).join('') + `L${x(n - 1)},${base}Z`
+      const line = (f) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(f(p)).toFixed(1)}`).join('')
+      if (n > 1) {
+        svg.append(sv('path', { d: area((p) => p.ctx), fill: 'var(--other)', 'fill-opacity': 0.3 }))
+        svg.append(sv('path', { d: area((p) => p.read), fill: 'var(--read)', 'fill-opacity': 0.75 }))
+        svg.append(sv('path', { d: line((p) => p.ctx), fill: 'none', stroke: 'var(--text-2)', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }))
+      } else {
+        const bw = 18
+        svg.append(sv('rect', { x: x(0) - bw / 2, y: y(pts[0].ctx), width: bw, height: base - y(pts[0].ctx), fill: 'var(--other)', 'fill-opacity': 0.3 }))
+        svg.append(sv('rect', { x: x(0) - bw / 2, y: y(pts[0].read), width: bw, height: base - y(pts[0].read), fill: 'var(--read)', 'fill-opacity': 0.75 }))
+      }
+      if (guide) {
+        svg.append(sv('line', { x1: m.l, x2: W - m.r, y1: y(150e3), y2: y(150e3), stroke: 'var(--muted)', 'stroke-dasharray': '4 4', 'stroke-width': 1 }))
+        svg.append(sv('text', { x: m.l + 4, y: y(150e3) - 5, fill: 'var(--muted)', 'font-size': 11 }, '150k'))
+      }
+      const marks = sv('g')
+      pts.forEach((p, i) => {
+        if (p.flag === 4) {
+          marks.append(sv('line', { x1: x(i), x2: x(i), y1: y(p.ctx), y2: base, stroke: 'var(--shrink)', 'stroke-dasharray': '2 3', 'stroke-width': 1 }))
+          marks.append(mark('shrink', x(i), y(p.ctx)))
+        } else if (p.flag >= 1 && p.flag <= 3) marks.append(mark(REASONS[p.flag - 1], x(i), y(p.ctx)))
+      })
+      const cross = sv('line', { y1: m.t, y2: base, stroke: 'var(--muted)', 'stroke-width': 1, style: 'display:none' })
+      const dot = sv('circle', { r: 3.5, fill: 'var(--text)', stroke: 'var(--surface)', 'stroke-width': 2, style: 'display:none' })
+      svg.append(cross, marks, dot)
+      const hit = sv('rect', { x: m.l - 6, y: m.t, width: iw + 12, height: ih, fill: 'transparent' })
+      hit.addEventListener('pointermove', (e) => {
+        const rect = svg.getBoundingClientRect(), px = ((e.clientX - rect.left) * W) / rect.width
+        const i = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round(((px - m.l) / iw) * (n - 1))))
+        if (i !== active) show(i)
+      })
+      hit.addEventListener('pointerleave', () => { if (document.activeElement !== box) hide() })
+      svg.append(hit)
+      box.replaceChildren(svg, tip)
+      geo = { x, y, cross, dot }
+      if (active >= 0) show(active)
+    }
+    box.addEventListener('keydown', (e) => {
+      const step = e.shiftKey ? Math.max(1, Math.round(n / 20)) : 1
+      let i = active
+      if (e.key === 'ArrowRight') i = i < 0 ? 0 : Math.min(n - 1, i + step)
+      else if (e.key === 'ArrowLeft') i = i < 0 ? n - 1 : Math.max(0, i - step)
+      else if (e.key === 'Home') i = 0
+      else if (e.key === 'End') i = n - 1
+      else if (e.key === 'Escape') { hide(); return }
+      else return
+      e.preventDefault(); e.stopPropagation(); show(i)
+    })
+    box.addEventListener('focus', () => { if (active < 0) show(Math.max(0, pts.findIndex((p) => p.flag > 0))) })
+    box.addEventListener('blur', hide)
+    onWidth(box, draw)
+  }
+
+  // ---------- key findings ----------
+  function renderFindings() {
+    const box = $('findings')
+    const list = (Array.isArray(D.findings) ? D.findings : []).filter((f) => f && S(f.title))
+    if (!list.length) { box.replaceChildren(el('p', { class: 'empty', text: 'Nothing stands out: your sessions already reuse the cache well.' })); return }
+    box.replaceChildren(...list.map((f) => el('article', { class: 'finding' },
+      el('div', { class: 'v', text: S(f.value) }),
+      el('h3', { text: S(f.title) }),
+      el('p', { text: S(f.text) }),
+      S(f.action) ? el('p', { class: 'act', text: S(f.action) }) : '')))
+  }
+
+  // ---------- share ----------
+  function shareText() { return D.share || `${Math.round(shares.reread)}% of my ${D.product} usage over ${D.span} was re-reading context. Check yours: npx reread-cli` }
+  function wrapLines(ctx, text, width) {
+    const words = text.split(/\s+/), lines = []
+    let line = ''
+    for (const w of words) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > width && line) { lines.push(line); line = w } else line = t }
+    if (line) lines.push(line)
+    return lines
+  }
+  function drawCard() {
+    const c = $('card'), ctx = c.getContext('2d')
+    if (!ctx) return c
+    const W = 1200, H = 630, P = 80, FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+    const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+    ctx.fillStyle = '#111110'; ctx.fillRect(0, 0, W, H)
+    // brand
+    ctx.strokeStyle = '#3987e5'; ctx.lineWidth = 4; ctx.lineCap = 'round'
+    ctx.beginPath(); ctx.arc(P + 14, 86, 13, -Math.PI * 0.25, Math.PI * 1.6); ctx.stroke()
+    ctx.fillStyle = '#f0efec'; ctx.font = `600 28px ${FONT}`; ctx.textBaseline = 'middle'
+    ctx.fillText('ReRead', P + 42, 87)
+    ctx.fillStyle = '#a5a49b'; ctx.font = `400 24px ${FONT}`; ctx.textAlign = 'right'
+    ctx.fillText(`${D.product} usage, from token counts`, W - P, 87)
+    ctx.textAlign = 'left'
+    // number and sentence
+    const big = `${Math.round(shares.reread)}%`
+    ctx.fillStyle = '#f0efec'; ctx.textBaseline = 'alphabetic'; ctx.font = `700 190px ${FONT}`
+    ctx.fillText(big, P - 6, 320)
+    const bigW = ctx.measureText(big).width
+    ctx.font = `500 40px ${FONT}`; ctx.fillStyle = '#d4d3cb'
+    const sx = P + bigW + 36, room = W - P - sx
+    const sentence = `of my ${D.product} usage was re-reading context`
+    if (room > 330) {
+      const lines = wrapLines(ctx, sentence, room).slice(0, 3)
+      lines.forEach((l, i) => ctx.fillText(l, sx, 320 - (lines.length - 1 - i) * 50))
+    } else {
+      wrapLines(ctx, sentence, W - 2 * P).slice(0, 2).forEach((l, i) => ctx.fillText(l, P, 380 + i * 50))
+    }
+    // split bar
+    const by = 400, bh = 22, parts = [['#3987e5', shares.read], ['#e0652f', shares.rebuild], ['#6b6a64', shares.other]]
+    const sum = parts.reduce((a, [, v]) => a + Math.max(0, v), 0) || 1
+    let bx = P
+    const bwid = W - 2 * P, vis = parts.filter(([, v]) => v > 0)
+    vis.forEach(([col, v], i) => {
+      const w = (Math.max(0, v) / sum) * (bwid - 4 * (vis.length - 1))
+      ctx.fillStyle = col; ctx.fillRect(bx, by, w, bh); bx += w + 4
+    })
+    ctx.font = `400 22px ${FONT}`; ctx.textBaseline = 'top'
+    let lx = P
+    for (const [col, v, label] of [['#3987e5', shares.read, 'cache reads'], ['#e0652f', shares.rebuild, 'written again'], ['#6b6a64', shares.other, 'everything else']]) {
+      ctx.fillStyle = col; ctx.fillRect(lx, by + bh + 22, 14, 14)
+      ctx.fillStyle = '#d4d3cb'; const t = `${pct(v)} ${label}`; ctx.fillText(t, lx + 22, by + bh + 18)
+      lx += 22 + ctx.measureText(t).width + 36
+    }
+    // footer
+    ctx.fillStyle = '#a5a49b'; ctx.font = `400 26px ${FONT}`; ctx.textBaseline = 'alphabetic'
+    ctx.fillText(`${D.span} · ${plural(N(sm.sessions), 'session', 'sessions')}`, P, H - 72)
+    ctx.font = `600 28px ${MONO}`
+    const cmd = 'npx reread-cli', cw = ctx.measureText(cmd).width
+    ctx.strokeStyle = '#44443f'; ctx.lineWidth = 2
+    ctx.strokeRect(W - P - cw - 36, H - 72 - 40, cw + 36, 56)
+    ctx.fillStyle = '#f0efec'; ctx.fillText(cmd, W - P - cw - 18, H - 72)
+    return c
+  }
+  function download(name, blob) {
+    const url = URL.createObjectURL(blob)
+    const a = el('a', { href: url, download: name, style: 'display:none' })
+    document.body.append(a); a.click(); a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 2000)
+  }
+  const stamp = () => { const d = new Date(D.generatedAt); const t = isNaN(d) ? new Date() : d; return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}` }
+  function say(msg) { const s = $('share-status'); s.textContent = msg; clearTimeout(say.t); say.t = setTimeout(() => { s.textContent = '' }, 2500) }
+  async function copy(text) {
+    try {
+      if (!navigator.clipboard) throw new Error('no clipboard')
+      await Promise.race([navigator.clipboard.writeText(text), new Promise((_, no) => setTimeout(() => no(new Error('timeout')), 1500))])
+      return true
+    } catch {
+      const ta = el('textarea', { style: 'position:fixed;opacity:0;top:0;left:0' }); ta.value = text
+      document.body.append(ta); ta.select()
+      let ok = false; try { ok = document.execCommand('copy') } catch { ok = false }
+      ta.remove(); return ok
+    }
+  }
+  function renderShare() {
+    $('share-text').textContent = shareText()
+    drawCard()
+    $('copy-text').addEventListener('click', async () => say((await copy(shareText())) ? 'Copied.' : 'Could not copy. Select the text above instead.'))
+    $('download-image').addEventListener('click', () => {
+      const c = drawCard()
+      if (c.toBlob) c.toBlob((b) => { if (b) { download(`reread-${stamp()}.png`, b); say('Image saved.') } }, 'image/png')
+    })
+  }
+
+  // ---------- toolbar ----------
+  function csvCell(v) {
+    let t = S(v)
+    if (/^[=+\-@\t\r]/.test(t)) t = "'" + t // keep spreadsheet apps from running a folder name as a formula
+    return /[",\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
+  }
+  function renderToolbar() {
+    const hideBtn = $('hide-names')
+    if (D.anon) {
+      hideBtn.disabled = true; hideBtn.setAttribute('aria-pressed', 'true')
+      hideBtn.title = 'Names were already hidden when this report was made'
+    } else hideBtn.setAttribute('aria-pressed', String(state.hide))
+    hideBtn.addEventListener('click', () => {
+      state.hide = !state.hide
+      hideBtn.setAttribute('aria-pressed', String(state.hide))
+      store.set('reread.hideNames', state.hide ? '1' : '0')
+      renderProjects(); renderSessions()
+    })
+    // With names hidden, the exports hide them too: they are usually made to be shared.
+    const outName = (p) => (state.hide ? pname(p) : S(p)), outBranch = (b) => (state.hide && S(b) ? bname(b) : S(b))
+    $('export-json').addEventListener('click', () => {
+      const out = !state.hide ? raw : { ...raw, anon: true,
+        projects: (raw.projects || []).map((p) => ({ ...p, project: outName(p.project) })),
+        sessions: (raw.sessions || []).map((x) => ({ ...x, project: outName(x.project), branch: outBranch(x.branch) })) }
+      download(`reread-${stamp()}.json`, new Blob([JSON.stringify(out)], { type: 'application/json' }))
+    })
+    $('export-csv').addEventListener('click', () => {
+      const head = ['session', 'tool', 'project', 'branch', 'started', 'ended', 'replies', 'peak_context', 'api_usd', 'reread_pct', 'rebuilds_cold', 'rebuilds_model', 'rebuilds_prefix'] // the same as reread --csv
+      const lines = [head.join(',')].concat(D.sessions.map((s) => { const r = rebuildsOf(s); return [s.id, S(s.tool) || 'claude', outName(s.project), outBranch(s.branch), s.started, s.ended, N(s.calls), N(s.peak), N(s.usd), N(s.rereadShare), r.cold, r.model, r.prefix].map(csvCell).join(',') }))
+      download(`reread-sessions-${stamp()}.csv`, new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/csv' }))
+    })
+    const filter = $('filter')
+    filter.addEventListener('input', () => { state.filter = filter.value; renderSessions() })
+    let w = 0
+    window.addEventListener('resize', () => { if (window.innerWidth !== w) { w = window.innerWidth; fitDrill() } })
+  }
+
+  renderHeader()
+  renderToolbar()
+  renderDaily()
+  renderBuckets()
+  renderWhy()
+  renderProjects()
+  renderModels()
+  renderSessions()
+  renderFindings()
+  renderShare()
+})()
+</script>
+</body>
+</html>

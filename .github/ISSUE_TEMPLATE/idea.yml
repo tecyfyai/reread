@@ -1,0 +1,14 @@
+name: Idea
+description: Something ReRead could show or do
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to know about your usage, or do with it?
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How you picture it (optional)
