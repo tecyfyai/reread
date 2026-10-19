@@ -74,9 +74,10 @@
     }
   },
   "scripts": {
+    "vscode:prepublish": "node build.mjs",
     "build": "node build.mjs",
     "check": "tsc -p .",
-    "package": "node build.mjs && vsce package --no-dependencies"
+    "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "20.19.43",
