@@ -2,3 +2,5 @@ node_modules/
 package-lock.json
 scripts/sample-data.json
 src/report.html
+vscode/dist/
+vscode/.vscode-test/

@@ -20,9 +20,9 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { walk } from './analyze.js'
 import { pct, tokens } from './format.js'
-import { contextOf, priceOf } from './prices.js'
 import { callOf, collect } from './claude.js'
 import { readLines } from './files.js'
+import { contextOf, priceOf } from './prices.js'
 
 /** @typedef {import('./prices.js').Call} Call */
 
@@ -45,25 +45,48 @@ export function statusline(input, { now = Date.now(), color = false, cacheDir = 
   }
   if (!file || !existsSync(file)) return 'reread: no session yet'
 
-  const calls = readCalls(file, cacheDir)
-  const s = walk([...calls.values()].sort((a, b) => a.ts - b.ts))
-  if (!s.lastCall) return 'reread: no replies yet'
+  const s = sessionState(file, { cacheDir })
+  if (!s) return 'reread: no replies yet'
 
   const paint = (/** @type {number} */ code) => (/** @type {string} */ t) => (color ? `\x1b[${code}m${t}\x1b[0m` : t)
-  const ctx = contextOf(s.lastCall)
-  const left = s.ttl - (now - s.lastCall.ts)
-  const p = priceOf(s.lastCall.model, ctx)
-  const parts = [`ctx ${tokens(ctx)}`]
-  if (left > 0) {
-    const m = Math.floor(left / 60e3)
-    const sec = Math.floor((left % 60e3) / 1e3)
-    parts.push(paint(left < 60e3 ? 33 : 32)(`cache warm ${m}:${String(sec).padStart(2, '0')}`))
-  } else {
-    const rewrite = (ctx * (s.ttl > 300e3 ? p.write1h : p.write5m)) / 1e6
-    parts.push(paint(31)(`cache cold: next reply rewrites ${tokens(ctx)} (~$${rewrite.toFixed(2)})`))
-  }
-  parts.push(`re-read ${pct(s.readCost + s.rebuildCost, s.cost).toFixed(0)}%`)
+  const left = s.warmUntil - now
+  const parts = [`ctx ${tokens(s.ctx)}`]
+  if (left > 0) parts.push(paint(left < 60e3 ? 33 : 32)(`cache warm ${clock(left)}`))
+  else parts.push(paint(31)(`cache cold: next reply rewrites ${tokens(s.ctx)} (~$${s.rewriteUsd.toFixed(2)})`))
+  parts.push(`re-read ${s.rereadPct.toFixed(0)}%`)
   return parts.join(' · ')
+}
+
+/**
+ * Minutes and seconds, as 3:41.
+ * @param {number} ms
+ */
+export const clock = (ms) => `${Math.floor(ms / 60e3)}:${String(Math.floor((ms % 60e3) / 1e3)).padStart(2, '0')}`
+
+/**
+ * Where a session stands: the context its last reply sent, until when the cache stays warm, what writing the context
+ * to the cache again would cost, and how much of the session so far was re-reading. Null before the first reply.
+ * @param {string} file
+ * @param {{ cacheDir?: string | null }} [opts]  cacheDir null: no cache
+ */
+export function sessionState(file, { cacheDir = defaultCacheDir() } = {}) {
+  const calls = readCalls(file, cacheDir)
+  const s = walk([...calls.values()].sort((a, b) => a.ts - b.ts))
+  if (!s.lastCall) return null
+  const ctx = contextOf(s.lastCall)
+  const p = priceOf(s.lastCall.model, ctx)
+  return {
+    model: s.lastCall.model,
+    ctx,
+    lastReply: s.lastCall.ts,
+    /** the cache's life: 5 minutes, or 1 hour once the session has written to the 1-hour cache */
+    ttl: s.ttl,
+    warmUntil: s.lastCall.ts + s.ttl,
+    rewriteUsd: (ctx * (s.ttl > 300e3 ? p.write1h : p.write5m)) / 1e6,
+    rereadPct: pct(s.readCost + s.rebuildCost, s.cost),
+    usd: s.cost,
+    replies: calls.size,
+  }
 }
 
 /**
@@ -107,7 +130,7 @@ function readCalls(file, cacheDir) {
  * A per-user folder for the cache, or null when one cannot be made safely.
  * @returns {string | null}
  */
-function defaultCacheDir() {
+export function defaultCacheDir() {
   const uid = typeof process.getuid === 'function' ? process.getuid() : null
   const dir = path.join(tmpdir(), `reread-${uid ?? 'user'}`)
   try {

@@ -1,20 +1,22 @@
 // Unit tests for each module: node --test
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { appendFileSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, test } from 'node:test'
-import { emptyTotals } from '../src/analyze.js'
+import { analyze, emptyTotals } from '../src/analyze.js'
 import { parseArgs, UsageError } from '../src/args.js'
 import { findingsOf } from '../src/findings.js'
 import { PRICES, priceOf } from '../src/prices.js'
 import { csvCell } from '../src/render.js'
 import { buildReport, readTemplate } from '../src/report.js'
 import { readCodexFile } from '../src/codex.js'
-import { callOf } from '../src/claude.js'
+import { callOf, claudeFolderName, latestClaudeSession } from '../src/claude.js'
 import { readLines } from '../src/files.js'
 import { statusline } from '../src/statusline.js'
+import { sessionFiles } from '../src/tools.js'
+import { saveRequest, statusView } from '../vscode/src/core.js'
 import { folder, MIN, reply, rollout, T0 } from './helpers.js'
 
 describe('parseArgs', () => {
@@ -161,8 +163,6 @@ describe('reading', () => {
   })
 })
 
-describe('walk', () => {})
-
 describe('findings', () => {
   /** @param {Partial<ReturnType<typeof emptyTotals>>} t */
   const analysis = (t, sessions = 1, buckets = new Map()) => {
@@ -230,5 +230,48 @@ describe('statusline', () => {
     const cached = statusline(input(file), { now, cacheDir })
     assert.equal(cached, statusline(input(file), { now, cacheDir: null }))
     assert.match(cached, /^ctx 52k · cache warm 4:00 · re-read \d+%$/)
+  })
+})
+
+describe('a workspace (the VS Code extension)', () => {
+  test('its latest session and its report take only sessions in its folder or below', () => {
+    const at = (/** @type {string} */ cwd) => [reply({ id: cwd, at: 0, write: 5000, cwd })]
+    const root = folder({
+      [`${claudeFolderName('/work/shop')}/a.jsonl`]: at('/work/shop'),
+      [`${claudeFolderName('/work/shop/api')}/b.jsonl`]: at('/work/shop/api'),
+      // Its folder name starts like the workspace's, but it ran elsewhere.
+      [`${claudeFolderName('/work/shop-old')}/c.jsonl`]: at('/work/shop-old'),
+      'rollout-2026-01-05T10-00-00-0199a0b1-0000-7000-8000-000000000001.jsonl': rollout({
+        cwd: '/work/shop',
+        responses: [{ at: 0, input: 100 }],
+      }),
+    })
+    const old = (/** @type {string} */ f, /** @type {number} */ t) => utimesSync(path.join(root, f), t, t)
+    old(`${claudeFolderName('/work/shop')}/a.jsonl`, 1000)
+    old(`${claudeFolderName('/work/shop/api')}/b.jsonl`, 2000)
+    old(`${claudeFolderName('/work/shop-old')}/c.jsonl`, 3000)
+
+    assert.equal(path.basename(latestClaudeSession(['/work/shop'], { dirs: [root] }) ?? ''), 'b.jsonl')
+    assert.equal(latestClaudeSession(['/work/cafe'], { dirs: [root] }), null)
+
+    const folders = ['/work/shop']
+    const a = analyze(sessionFiles([root], { since: 0, project: '', tool: 'all', folders }), { since: 0, folders })
+    assert.deepEqual(a.sessions.map((x) => x.tool).sort(), ['claude', 'claude', 'codex'])
+  })
+
+  test('the status bar counts down, then says cold', () => {
+    const s = { model: 'm', ctx: 176e3, lastReply: 0, ttl: 300e3, warmUntil: 300e3, rewriteUsd: 0.88, rereadPct: 44 }
+    const s2 = /** @type {any} */ (s)
+    assert.equal(statusView(s2, 79e3)?.text, '$(history) 176k · 3:41')
+    assert.equal(statusView(s2, 301e3)?.cold, true)
+    assert.match(statusView(s2, 301e3)?.tooltip ?? '', /about \$0\.88/)
+    assert.equal(statusView(s2, 13 * 3600e3), null)
+  })
+
+  test('the report page can ask to save only its own kinds of file', () => {
+    const data = `data:text/csv;base64,${Buffer.from('a,b').toString('base64')}`
+    assert.equal(saveRequest({ type: 'save', name: 'reread-sessions-2026-10-19.csv', data })?.bytes.toString(), 'a,b')
+    assert.equal(saveRequest({ type: 'save', name: '../../.bashrc', data }), null)
+    assert.equal(saveRequest({ type: 'save', name: 'reread-2026-10-19.json', data: 'not a data url' }), null)
   })
 })

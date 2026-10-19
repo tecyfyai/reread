@@ -28,6 +28,20 @@ export function filesUnder(dir, keep) {
   return out
 }
 
+/**
+ * Whether a path is a folder or inside it. Paths are compared as written, ignoring case on macOS and Windows, whose
+ * disks usually do.
+ * @param {string} p
+ * @param {string} folder
+ */
+export function isInside(p, folder) {
+  const fold = process.platform === 'darwin' || process.platform === 'win32'
+  const a = path.resolve(p)
+  const b = path.resolve(folder)
+  const [x, y] = fold ? [a.toLowerCase(), b.toLowerCase()] : [a, b]
+  return x === y || x.startsWith(y.endsWith(path.sep) ? y : y + path.sep)
+}
+
 /** The folders that exist. */
 export const existingDirs = (/** @type {string[]} */ dirs) => dirs.filter((d) => existsSync(d))
 

@@ -4,7 +4,7 @@
 import { statSync } from 'node:fs'
 import path from 'node:path'
 import { antigravityDirs, isAntigravityFile, isAntigravityOther, readAntigravityFile } from './antigravity.js'
-import { claudeDirs, readClaudeFile } from './claude.js'
+import { claudeDirs, claudeFolderName, readClaudeFile } from './claude.js'
 import { codexDirs, isCodexFile, readCodexFile } from './codex.js'
 import { existingDirs, filesUnder } from './files.js'
 
@@ -28,6 +28,7 @@ import { existingDirs, filesUnder } from './files.js'
  * @property {(file: string) => boolean} [ignores]  a file in its folders that is not a session
  * @property {(file: string, since: number, seen: Set<string>) => Read} read
  * @property {boolean} [projectInPath]  its folder names hold the project, so --project filters paths
+ * @property {(cwd: string) => string} [folderName]  the name of the folder it keeps a project's sessions in
  */
 
 /** In the order a file is matched: the more specific names first, Claude Code's plain .jsonl last. */
@@ -55,6 +56,7 @@ export const TOOLS = /** @type {const} */ ({
     owns: (/** @type {string} */ f) => f.endsWith('.jsonl'),
     read: readClaudeFile,
     projectInPath: true,
+    folderName: claudeFolderName,
   },
 })
 /** @typedef {keyof typeof TOOLS} Tool */
@@ -101,12 +103,19 @@ export function rootsFor(tool, dir) {
 /**
  * The session files to read: changed at or after `since`, of the chosen tool, oldest first, so a reply copied into a
  * resumed session is counted in the session that made it. Where a tool's folder names hold the project, `project`
- * filters paths here; the other tools name the folder inside, so analyze() filters those.
+ * and `folders` filter paths here; the other tools name the folder inside, so analyze() filters those.
  * @param {string[]} roots
- * @param {{ since: number, project: string, tool: 'all' | Tool }} filter
+ * @param {{ since: number, project: string, tool: 'all' | Tool, folders?: string[] }} filter
  */
-export function sessionFiles(roots, { since, project, tool }) {
+export function sessionFiles(roots, { since, project, tool, folders = [] }) {
   const needle = project.toLowerCase()
+  /** @param {Tool} t @param {string} root @param {string} f */
+  const inFolders = (t, root, f) => {
+    const name = INFO[t].folderName
+    if (!folders.length || !name) return true
+    const top = path.relative(root, f).split(path.sep)[0]
+    return folders.some((d) => top === name(d) || top.startsWith(`${name(d)}-`))
+  }
   /** @type {[string, number, number][]} */
   const found = []
   for (const root of roots) {
@@ -114,6 +123,7 @@ export function sessionFiles(roots, { since, project, tool }) {
       const t = /** @type {Tool} */ (toolOf(f))
       if (tool !== 'all' && t !== tool) continue
       if (needle && INFO[t].projectInPath && !path.relative(root, f).toLowerCase().includes(needle)) continue
+      if (!inFolders(t, root, f)) continue
       let st
       try {
         st = statSync(f)

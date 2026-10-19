@@ -2,11 +2,16 @@
 // Reading Claude Code's session files: ~/.claude/projects/<folder>/<session-id>.jsonl, a subagent's in
 // <session-id>/subagents/. Each line is one JSON event; ReRead keeps only the token counts, model, time and id of each
 // reply, plus the folder and git branch of the session. It never keeps or prints what was written in the conversation.
+import { closeSync, openSync, readdirSync, readSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import path from 'node:path'
-import { eachLine } from './files.js'
+import { eachLine, existingDirs, isInside, splitLines } from './files.js'
 
 /** @typedef {import('./prices.js').Call} Call */
+
+const USAGE = Buffer.from('"usage"')
+const CWD = Buffer.from('"cwd"')
+const BRANCH = Buffer.from('"gitBranch"')
 
 /**
  * The folders Claude Code may keep sessions in, most specific first.
@@ -19,6 +24,92 @@ export function claudeDirs(env = process.env, home = homedir()) {
     path.join(home, '.claude', 'projects'),
     path.join(home, '.config', 'claude', 'projects'),
   ].filter(Boolean)
+}
+
+/**
+ * The folder name Claude Code gives a project: its path, with every character that is not a letter or digit as '-'.
+ * Different paths can share a name ('a b' and 'a-b'), so a session's own `cwd` is what decides.
+ * @param {string} cwd
+ */
+export const claudeFolderName = (cwd) => cwd.replace(/[^a-zA-Z0-9]/g, '-')
+
+/**
+ * The folder a session ran in, from the first line that names it (near the top of the file), or ''.
+ * @param {string} file
+ */
+export function cwdOf(file) {
+  let fd
+  try {
+    fd = openSync(file, 'r')
+    const buf = Buffer.alloc(256 * 1024)
+    const got = readSync(fd, buf, 0, buf.length, 0)
+    let cwd = ''
+    splitLines(buf.subarray(0, got), (line) => {
+      if (cwd || !line.includes(CWD)) return
+      try {
+        const v = JSON.parse(line.toString('utf8')).cwd
+        if (typeof v === 'string') cwd = v
+      } catch {
+        /* not JSON, or cut off at the end of the buffer */
+      }
+    })
+    return cwd
+  } catch {
+    return ''
+  } finally {
+    if (fd !== undefined) closeSync(fd)
+  }
+}
+
+/**
+ * The session file written to last, of the sessions that ran in one of these folders or a folder inside one. Subagent
+ * files are left out: the status of a session is its main file's.
+ * @param {string[]} folders
+ * @param {{ dirs?: string[], cwdCache?: Map<string, string> }} [opts]  cwdCache: file to cwd, kept between calls
+ * @returns {string | null}
+ */
+export function latestClaudeSession(folders, { dirs = claudeDirs(), cwdCache = new Map() } = {}) {
+  const root = existingDirs(dirs)[0]
+  if (!root || !folders.length) return null
+  const names = folders.map(claudeFolderName)
+  let best = null
+  let bestTime = -1
+  let entries
+  try {
+    entries = readdirSync(root, { withFileTypes: true })
+  } catch {
+    return null
+  }
+  for (const d of entries) {
+    if (!d.isDirectory() || !names.some((n) => d.name === n || d.name.startsWith(`${n}-`))) continue
+    const dir = path.join(root, d.name)
+    let files
+    try {
+      files = readdirSync(dir)
+    } catch {
+      continue
+    }
+    for (const name of files) {
+      if (!name.endsWith('.jsonl')) continue
+      const f = path.join(dir, name)
+      let t
+      try {
+        t = statSync(f).mtimeMs
+      } catch {
+        continue
+      }
+      if (t <= bestTime) continue
+      let cwd = cwdCache.get(f)
+      if (cwd === undefined) {
+        cwd = cwdOf(f)
+        if (cwd) cwdCache.set(f, cwd)
+      }
+      if (!cwd || !folders.some((folder) => isInside(cwd, folder))) continue
+      best = f
+      bestTime = t
+    }
+  }
+  return best
 }
 
 /**
@@ -68,10 +159,6 @@ export function collect(calls, call) {
   if (old) old.out = Math.max(old.out, call.out)
   else calls.set(call.key, call)
 }
-
-const USAGE = Buffer.from('"usage"')
-const CWD = Buffer.from('"cwd"')
-const BRANCH = Buffer.from('"gitBranch"')
 
 /**
  * Read the replies of one session file. A resumed or forked session copies the replies it carries over into its new

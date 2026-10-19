@@ -1100,7 +1100,15 @@ footer .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12
     ctx.fillStyle = '#f0efec'; ctx.fillText(cmd, W - P - cw - 18, H - 72)
     return c
   }
+  // Inside the VS Code extension the page cannot download; it hands the file to the editor, which asks where to save it.
+  const editor = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null
   function download(name, blob) {
+    if (editor) {
+      const r = new FileReader()
+      r.onload = () => editor.postMessage({ type: 'save', name, data: r.result })
+      r.readAsDataURL(blob)
+      return
+    }
     const url = URL.createObjectURL(blob)
     const a = el('a', { href: url, download: name, style: 'display:none' })
     document.body.append(a); a.click(); a.remove()
@@ -1126,7 +1134,7 @@ footer .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12
     $('copy-text').addEventListener('click', async () => say((await copy(shareText())) ? 'Copied.' : 'Could not copy. Select the text above instead.'))
     $('download-image').addEventListener('click', () => {
       const c = drawCard()
-      if (c.toBlob) c.toBlob((b) => { if (b) { download(`reread-${stamp()}.png`, b); say('Image saved.') } }, 'image/png')
+      if (c.toBlob) c.toBlob((b) => { if (b) { download(`reread-${stamp()}.png`, b); if (!editor) say('Image saved.') } }, 'image/png')
     })
   }
 
@@ -1177,6 +1185,7 @@ footer .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12
   renderSessions()
   renderFindings()
   renderShare()
+  if (editor) editor.postMessage({ type: 'ready' })
 })()
 </script>
 </body>

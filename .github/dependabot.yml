@@ -11,3 +11,20 @@ updates:
     groups:
       dev-tools:
         dependency-type: development
+    ignore:
+      # The types match the oldest Node.js ReRead supports (engines in package.json); newer ones would let the check
+      # pass on code that fails there.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+  - package-ecosystem: npm
+    directory: /vscode
+    schedule:
+      interval: monthly
+    groups:
+      dev-tools:
+        dependency-type: development
+    ignore:
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # The types match the oldest VS Code the extension supports (engines.vscode in its package.json).
+      - dependency-name: '@types/vscode'

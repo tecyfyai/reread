@@ -1,0 +1,94 @@
+{
+  "name": "reread",
+  "displayName": "ReRead: prompt cache countdown and token usage for Claude Code",
+  "description": "See when your Claude Code prompt cache goes cold, and how much of your coding agent's usage was re-reading context (Claude Code, Codex, Antigravity). Local only; sends nothing.",
+  "version": "0.1.0",
+  "publisher": "hamperpick",
+  "license": "MIT",
+  "icon": "icon.png",
+  "homepage": "https://github.com/tecyfyai/reread/tree/main/vscode#readme",
+  "bugs": "https://github.com/tecyfyai/reread/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tecyfyai/reread.git",
+    "directory": "vscode"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "claude code",
+    "claude",
+    "codex",
+    "antigravity",
+    "prompt caching",
+    "prompt cache",
+    "token usage",
+    "context window",
+    "cost",
+    "usage limit"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "reread.openWorkspaceReport",
+        "title": "Open Report for This Workspace",
+        "category": "ReRead"
+      },
+      {
+        "command": "reread.openReport",
+        "title": "Open Report for All Projects",
+        "category": "ReRead"
+      }
+    ],
+    "configuration": {
+      "title": "ReRead",
+      "properties": {
+        "reread.statusBar": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the prompt cache countdown of this workspace's latest Claude Code session in the status bar."
+        },
+        "reread.days": {
+          "type": "integer",
+          "default": 30,
+          "minimum": 0,
+          "markdownDescription": "How many days back the report looks. `0` reads every session file still kept."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "tsc -p .",
+    "test": "node build.mjs && node test/run.mjs",
+    "package": "node build.mjs && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "@types/vscode": "1.90.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  },
+  "allowScripts": {
+    "esbuild": false,
+    "@vscode/vsce-sign": false
+  }
+}

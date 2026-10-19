@@ -2,6 +2,7 @@
 // Counting: what each reply cost, how much of it was re-reading history, and when the whole history had to be
 // written again.
 import path from 'node:path'
+import { isInside } from './files.js'
 import { findingsOf } from './findings.js'
 import { dayOf, pct, round1, round2 } from './format.js'
 import { contextOf, costOf, priceOf } from './prices.js'
@@ -187,10 +188,11 @@ export function walk(calls, onCall = () => {}) {
 /**
  * Read and count session files.
  * @param {string[]} files  in the order sessionFiles() gives
- * @param {{ since: number, project?: string, onProgress?: (done: number, total: number) => void }} opts
+ * @param {{ since: number, project?: string, folders?: string[], onProgress?: (done: number, total: number) => void }} opts
+ *   folders: only sessions that ran in one of these folders or a folder inside one.
  *   A file that cannot be read (removed meanwhile, no permission, a broken archive) is skipped and listed in `skipped`.
  */
-export function analyze(files, { since, project = '', onProgress }) {
+export function analyze(files, { since, project = '', folders = [], onProgress }) {
   const needle = project.toLowerCase()
   /** @type {Set<string>} */
   const seen = new Set()
@@ -235,9 +237,12 @@ export function analyze(files, { since, project = '', onProgress }) {
     }
     const { id, sub, cwd, branch, calls } = read
     if (!calls.some((c) => !c.seen)) return
-    if (!(/** @type {import('./tools.js').ToolInfo} */ (TOOLS[tool]).projectInPath) && needle) {
+    const info = /** @type {import('./tools.js').ToolInfo} */ (TOOLS[tool])
+    if (!info.projectInPath && needle) {
       if (!cwd.toLowerCase().includes(needle)) return
     }
+    // A file with no folder in it (a subagent's) was already chosen by its path, where the path holds the project.
+    if (folders.length && !(cwd ? folders.some((f) => isInside(cwd, f)) : info.projectInPath)) return
     const cur = sessions.get(id) ?? { id, tool, project: '', branch: '', points: [], ...emptyTotals() }
     const s = walk(calls, (c, x) => {
       tally(daily, dayOf(c.ts), x)

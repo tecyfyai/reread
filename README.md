@@ -41,7 +41,7 @@ Every tool with sessions on your machine is read; `--tool claude`, `--tool codex
 - **By context size**: how much of your usage came from replies with a large context (over 150k is where it adds up).
 - **Why the cache was lost**: a break longer than its life (5 minutes or 1 hour), a model switch mid-session, or a
   change near the start of the context (tools, MCP servers, settings).
-- **By project and by model**, and by tool when you use both.
+- **By project and by model**, and by tool when you use more than one.
 - **Sessions**: the 10 costliest, sortable and searchable across all of them, with their git branch. Open one to see
   its context grow reply by reply, with each rebuild and compaction marked.
 - **Share**: copy a line of text, or save an image card with no project names on it. Hide names in the whole report
@@ -75,6 +75,13 @@ Then add it to `~/.claude/settings.json`:
 ```
 
 More in [docs/statusline.md](docs/statusline.md).
+
+## In VS Code
+
+The [ReRead extension](vscode/README.md) shows the same countdown in the editor's status bar, for the latest Claude Code
+session in your workspace, whether Claude Code runs in the terminal or in the editor. Click it for the report of that
+workspace, in an editor tab. Install it from the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=hamperpick.reread).
 
 ## Options
 
@@ -132,8 +139,8 @@ A reply counts once, in the session that made it, even when a resumed session co
 toward the session that started it. "Writing history again" is estimated from token counts: a reply whose cache read
 fell below half of the previous reply's context while the context did not shrink.
 
-The details, with every rule and threshold: [docs/how-it-counts.md](docs/how-it-counts.md). Neither tool documents its
-session format, and either may change it; if ReRead reads yours wrong, please
+The details, with every rule and threshold: [docs/how-it-counts.md](docs/how-it-counts.md). None of the tools documents
+its session format, and any may change it; if ReRead reads yours wrong, please
 [open an issue](https://github.com/tecyfyai/reread/issues).
 
 Want to see what caching saves for a prompt of your own? The

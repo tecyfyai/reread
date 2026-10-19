@@ -5,7 +5,7 @@ sending the same history again? This page lists every rule, so you can check a n
 
 The code for each part is named in brackets.
 
-## What it reads (`src/sessions.js`)
+## What it reads (`src/claude.js`)
 
 Claude Code writes each session as a JSON Lines file under `~/.claude/projects/<folder>/<session-id>.jsonl` (or under
 `$CLAUDE_CONFIG_DIR/projects`). A subagent's replies go in `<session-id>/subagents/*.jsonl`.
@@ -143,7 +143,7 @@ time zone. Days in the report are local calendar days, from the first day with a
 
 ## Known limits
 
-- Neither tool's session format is documented; either may change between versions.
+- None of the tools documents its session format; any may change it between versions.
 - Rebuilds are inferred from token counts; Claude Code does not record why the cache missed.
 - Replies made outside Claude Code, Codex and Antigravity (the API directly, other tools) are not in these files.
 - Session files older than Claude Code keeps (30 days by default, `cleanupPeriodDays` in its settings) are gone, so

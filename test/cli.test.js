@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { canReadZstd } from '../src/codex.js'
 import { folder, MIN, reply, rollout, T0 } from './helpers.js'
 
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'reread.js')
@@ -205,7 +206,8 @@ test('Codex and Antigravity sessions are read next to Claude Code ones, and --to
   assert.equal(json(root, '--project', 'API').summary.calls, 2)
 })
 
-test('a file that cannot be read is skipped and named, not the end of the run', () => {
+// A broken archived Codex file is the unreadable file here; Node.js before 22.15 does not open archives at all.
+test('a file that cannot be read is skipped and named, not the end of the run', { skip: !canReadZstd }, () => {
   const root = folder({
     'p/a.jsonl': [reply({ id: 1, at: 0, write: 10000 })],
     'rollout-2026-x.jsonl.zst': ['not zstd'],

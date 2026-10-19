@@ -22,7 +22,7 @@ body:
     id: versions
     attributes:
       label: Versions
-      description: reread --version, claude --version, node --version, and your operating system
+      description: reread --version (or the extension's version), claude, codex or agy --version, node --version, and your operating system
       placeholder: reread 0.2.0, Claude Code 2.1.0, Node 24.1.0, macOS 15
     validations:
       required: true
