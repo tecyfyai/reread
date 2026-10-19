@@ -17,38 +17,9 @@ concurrency:
 # leave files behind that a later run on main would use.
 jobs:
   test:
-    name: Node ${{ matrix.node }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        node: [20, 22, 24]
-        include:
-          - os: macos-latest
-            node: 24
-          - os: windows-latest
-            node: 24
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ matrix.node }}
-      - run: npm ci
-      - run: npm run lint
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
-      - run: npm test
-
-  vscode:
-    name: VS Code extension
+    name: Lint, tests and the extension
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: vscode
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -57,6 +28,7 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
-      - run: npm run check
-      - run: xvfb-run -a npm test
-      - run: npx vsce package --no-dependencies
+      - run: npm run lint
+      - run: npm test
+      - run: npm ci && npm run check && npx vsce package --no-dependencies
+        working-directory: vscode

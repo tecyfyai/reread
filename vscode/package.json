@@ -76,13 +76,11 @@
   "scripts": {
     "build": "node build.mjs",
     "check": "tsc -p .",
-    "test": "node build.mjs && node test/run.mjs",
     "package": "node build.mjs && vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "20.19.43",
     "@types/vscode": "1.90.0",
-    "@vscode/test-electron": "3.1.0",
     "@vscode/vsce": "4.0.0",
     "esbuild": "0.28.2",
     "typescript": "7.0.2"

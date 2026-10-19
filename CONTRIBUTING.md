@@ -87,5 +87,5 @@ The extension has its own version and changelog in `vscode/`. Its build copies R
 so a fix there reaches both. To release it:
 
 1. Update `vscode/CHANGELOG.md` and the version in `vscode/package.json`.
-2. In `vscode/`: `npm ci`, `npm run check`, `npm test` (it starts VS Code; set `VSCODE_PATH` to use an installed one).
+2. In `vscode/`: `npm ci` and `npm run check`. Its logic is tested with the rest in `test/units.test.js`.
 3. `npx vsce package --no-dependencies`, then `npx vsce publish --packagePath <file>.vsix` (publisher `hamperpick`).

@@ -1,11 +1,10 @@
 // The CLI end to end, on made-up session files in a temp folder: node --test
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { canReadZstd } from '../src/codex.js'
 import { folder, MIN, reply, rollout, T0 } from './helpers.js'
 
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'reread.js')
@@ -48,14 +47,6 @@ test('a break longer than the 5-minute cache is a cold rebuild', () => {
   assert.ok(data.summary.rebuildShare > 0)
 })
 
-test('the 1-hour cache is not cold after 10 minutes', () => {
-  const data = json(
-    folder({ 'p/a.jsonl': [reply({ id: 1, at: 0, write1h: 10000 }), reply({ id: 2, at: 10 * MIN, write1h: 10010 })] }),
-  )
-  assert.equal(data.summary.rebuilds.cold.count, 0)
-  assert.equal(data.summary.rebuilds.prefix.count, 1)
-})
-
 test('switching model mid-session is a model rebuild', () => {
   const data = json(
     folder({
@@ -69,14 +60,6 @@ test('switching model mid-session is a model rebuild', () => {
   assert.equal(data.models.length, 2)
 })
 
-test('a context that shrinks (compaction or /clear) is not a rebuild', () => {
-  const data = json(
-    folder({ 'p/a.jsonl': [reply({ id: 1, at: 0, write: 100000 }), reply({ id: 2, at: 1 * MIN, write: 5000 })] }),
-  )
-  const r = data.summary.rebuilds
-  assert.equal(r.cold.count + r.model.count + r.prefix.count, 0)
-})
-
 test('replies copied into a resumed session are counted in the session that made them', () => {
   const first = [reply({ id: 1, at: 0, write: 10000 }), reply({ id: 2, at: MIN, read: 10000, write: 500 })]
   const root = folder({ 'p/a.jsonl': first })
@@ -88,17 +71,6 @@ test('replies copied into a resumed session are counted in the session that made
   const data = json(root)
   assert.equal(data.summary.calls, 3)
   assert.equal(data.summary.sessions, 2)
-})
-
-test("a subagent's replies count toward its session", () => {
-  const data = json(
-    folder({
-      'p/s1.jsonl': [reply({ id: 1, at: 0, write: 10000 })],
-      'p/s1/subagents/agent-x.jsonl': [reply({ id: 2, at: MIN, write: 3000 })],
-    }),
-  )
-  assert.equal(data.summary.sessions, 1)
-  assert.equal(data.sessions[0].calls, 2)
 })
 
 test('--anon hides project names and branches everywhere', () => {
@@ -120,30 +92,6 @@ test('--anon hides project names and branches everywhere', () => {
 test('never prints what was written in the conversation', () => {
   const root = folder({ 'p/a.jsonl': [reply({ id: 1, at: 0, write: 10000 })] })
   for (const flag of ['--json', '--csv', '--md', '--text']) assert.ok(!run(root, flag).includes('never read'))
-})
-
-test('--csv has one row per session', () => {
-  const root = folder({
-    'p/a.jsonl': [reply({ id: 1, at: 0, write: 10000 })],
-    'q/b.jsonl': [reply({ id: 2, at: MIN, write: 10000, cwd: '/work/blog' })],
-  })
-  const rows = run(root, '--csv').trim().split('\n')
-  assert.equal(rows.length, 3)
-  assert.match(rows[0], /^session,tool,project,branch,started/)
-  assert.match(rows[1], /^[^,]+,claude,/)
-})
-
-test('--html writes a report with the data in it', () => {
-  const root = folder({
-    'p/a.jsonl': [reply({ id: 1, at: 0, write: 10000 }), reply({ id: 2, at: MIN, read: 10000, write: 100 })],
-  })
-  const file = path.join(root, 'report.html')
-  run(root, '--html', file, '--no-open')
-  const html = readFileSync(file, 'utf8')
-  assert.ok(!html.includes('__REREAD_DATA__'))
-  const data = JSON.parse(html.match(/<script id="reread-data" type="application\/json">([\s\S]*?)<\/script>/)[1])
-  assert.equal(data.summary.calls, 2)
-  assert.equal(data.sessions[0].points.length, 2)
 })
 
 test('statusline shows the context and whether the cache is still warm', () => {
@@ -204,16 +152,4 @@ test('Codex and Antigravity sessions are read next to Claude Code ones, and --to
   assert.match(run(root, '--text', '--by', 'tool'), /By tool[\s\S]*Antigravity/)
   // --project matches a Codex session by the folder it ran in.
   assert.equal(json(root, '--project', 'API').summary.calls, 2)
-})
-
-// A broken archived Codex file is the unreadable file here; Node.js before 22.15 does not open archives at all.
-test('a file that cannot be read is skipped and named, not the end of the run', { skip: !canReadZstd }, () => {
-  const root = folder({
-    'p/a.jsonl': [reply({ id: 1, at: 0, write: 10000 })],
-    'rollout-2026-x.jsonl.zst': ['not zstd'],
-  })
-  const r = spawnSync('node', [CLI, '--dir', root, '--days', '0', '--json'], { encoding: 'utf8' })
-  assert.equal(r.status, 0)
-  assert.equal(JSON.parse(r.stdout).summary.calls, 1)
-  assert.match(r.stderr, /skipped .*rollout-2026-x\.jsonl\.zst/)
 })

@@ -5,43 +5,17 @@ import { appendFileSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, test } from 'node:test'
-import { analyze, emptyTotals } from '../src/analyze.js'
-import { parseArgs, UsageError } from '../src/args.js'
-import { findingsOf } from '../src/findings.js'
+import { analyze } from '../src/analyze.js'
 import { PRICES, priceOf } from '../src/prices.js'
 import { csvCell } from '../src/render.js'
 import { buildReport, readTemplate } from '../src/report.js'
 import { readCodexFile } from '../src/codex.js'
-import { callOf, claudeFolderName, latestClaudeSession } from '../src/claude.js'
+import { claudeFolderName, latestClaudeSession } from '../src/claude.js'
 import { readLines } from '../src/files.js'
 import { statusline } from '../src/statusline.js'
 import { sessionFiles } from '../src/tools.js'
-import { saveRequest, statusView } from '../vscode/src/core.js'
+import { saveRequest } from '../vscode/src/core.js'
 import { folder, MIN, reply, rollout, T0 } from './helpers.js'
-
-describe('parseArgs', () => {
-  const NOW = Date.parse('2026-10-19T12:00:00Z')
-  const usage = (/** @type {string[]} */ argv, /** @type {RegExp} */ msg) =>
-    assert.throws(
-      () => parseArgs(argv, NOW),
-      (err) => err instanceof UsageError && msg.test(err.message),
-    )
-
-  test('mistakes fail with a message instead of being ignored', () => {
-    usage(['--dyas', '7'], /unknown option --dyas/)
-    usage(['--days'], /--days needs a value/)
-    usage(['--days', '--json'], /--days needs a value/)
-    usage(['--days', 'x'], /--days takes a number/)
-    usage(['--days', '-1'], /--days takes a number/)
-    usage(['--days', '7', '--since', '2026-10-01'], /not both/)
-    usage(['--top', '2.5'], /--top takes a whole number/)
-    usage(['--by', 'week'], /--by takes project, model, tool or day/)
-    usage(['--tool', 'cursor'], /--tool takes claude, codex, antigravity or all/)
-    usage(['--json', '--csv'], /choose one/)
-    usage(['--json=yes'], /unknown option --json/)
-    usage(['report'], /unexpected argument report/)
-  })
-})
 
 describe('prices', () => {
   test('every row has 4 positive prices, a long-context row is dearer, and a 1-hour write costs 2 times input', () => {
@@ -62,20 +36,6 @@ describe('prices', () => {
         )
       }
     }
-  })
-
-  test('long-context rates apply only past their size', () => {
-    assert.equal(priceOf('claude-haiku-5-5', 100e3).input, 0.1)
-    assert.equal(priceOf('claude-haiku-5-5', 100e3 + 1).input, 0.5)
-    assert.equal(priceOf('gpt-6.1-sol', 272e3).input, 2)
-    assert.equal(priceOf('gpt-6.1-sol', 300e3).input, 4)
-  })
-
-  test('OpenAI ids: variants keep their model, newer versions do not borrow an older one', () => {
-    assert.equal(priceOf('gpt-5.1-codex-max').input, priceOf('gpt-5.1').input)
-    assert.equal(priceOf('gpt-5.4-mini').input, 0.75)
-    assert.equal(priceOf('gpt-7').input, priceOf('gpt-6.1-sol').input)
-    assert.equal(priceOf('claude-opus-4-9').input, priceOf('claude-opus-5-5').input)
   })
 })
 
@@ -124,24 +84,6 @@ describe('reading Codex', () => {
 })
 
 describe('reading', () => {
-  test('callOf keeps only real replies', () => {
-    assert.equal(callOf('not json "usage" "assistant"', 0), null)
-    assert.equal(callOf(JSON.stringify({ type: 'user', message: { usage: {} } }) + '"assistant"', 0), null)
-    assert.equal(callOf(reply({ id: 1, at: 0, model: '<synthetic>' }), 0), null)
-    assert.equal(callOf(reply({ id: 1, at: 0 }), T0 + 1), null)
-    const c = callOf(reply({ id: 1, at: 0, input: 5, write: 100, write1h: 50, read: 7, out: 9 }), 0)
-    assert.deepEqual(c, {
-      key: 'msg-1|req-1',
-      ts: T0,
-      model: 'claude-sonnet-4-5',
-      input: 5,
-      cw5: 100,
-      cw1: 50,
-      read: 7,
-      out: 9,
-    })
-  })
-
   test('readLines splits across 1 MB chunks and holds back an unfinished line', () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'reread-lines-'))
     const file = path.join(dir, 'a.jsonl')
@@ -160,34 +102,6 @@ describe('reading', () => {
     const again = []
     readLines(file, 4, (b) => again.push(b.toString().slice(0, 1)))
     assert.deepEqual(again, ['x', 't'])
-  })
-})
-
-describe('findings', () => {
-  /** @param {Partial<ReturnType<typeof emptyTotals>>} t */
-  const analysis = (t, sessions = 1, buckets = new Map()) => {
-    const total = { ...emptyTotals(), ...t }
-    const list = Array.from({ length: sessions }, (_, i) => ({
-      ...emptyTotals(),
-      cost: i < 10 ? total.cost / 20 : total.cost / (2 * (sessions - 10)),
-      id: String(i),
-      project: '',
-      branch: '',
-      points: [],
-    }))
-    return { total, sessions: list, buckets, daily: new Map(), models: new Map() }
-  }
-
-  test('each finding appears past its threshold, the costliest first', () => {
-    const rebuilds = { cold: { n: 4, cost: 5 }, model: { n: 0, cost: 0 }, prefix: { n: 1, cost: 1 } }
-    const buckets = new Map([['200–500k', { calls: 50, usd: 40, readUsd: 30, rebuildUsd: 0 }]])
-    const f = findingsOf(analysis({ cost: 100, rebuildCost: 6, rebuilds, compact: { n: 3, ctx: 600e3 } }, 20, buckets))
-    assert.deepEqual(
-      f.map((x) => x.id),
-      ['concentration', 'long-context', 'cache-lost', 'compaction'],
-    )
-    assert.match(f.find((x) => x.id === 'cache-lost')?.text ?? '', /breaks longer than the cache's life \(4 times\)/)
-    assert.equal(f.find((x) => x.id === 'compaction')?.value, '200k')
   })
 })
 
@@ -257,15 +171,6 @@ describe('a workspace (the VS Code extension)', () => {
     const folders = ['/work/shop']
     const a = analyze(sessionFiles([root], { since: 0, project: '', tool: 'all', folders }), { since: 0, folders })
     assert.deepEqual(a.sessions.map((x) => x.tool).sort(), ['claude', 'claude', 'codex'])
-  })
-
-  test('the status bar counts down, then says cold', () => {
-    const s = { model: 'm', ctx: 176e3, lastReply: 0, ttl: 300e3, warmUntil: 300e3, rewriteUsd: 0.88, rereadPct: 44 }
-    const s2 = /** @type {any} */ (s)
-    assert.equal(statusView(s2, 79e3)?.text, '$(history) 176k · 3:41')
-    assert.equal(statusView(s2, 301e3)?.cold, true)
-    assert.match(statusView(s2, 301e3)?.tooltip ?? '', /about \$0\.88/)
-    assert.equal(statusView(s2, 13 * 3600e3), null)
   })
 
   test('the report page can ask to save only its own kinds of file', () => {

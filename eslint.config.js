@@ -2,7 +2,7 @@ import js from '@eslint/js'
 import globals from 'globals'
 
 export default [
-  { ignores: ['node_modules/', 'coverage/', 'vscode/dist/', 'vscode/.vscode-test/'] },
+  { ignores: ['node_modules/', 'coverage/', 'vscode/dist/'] },
   js.configs.recommended,
   {
     files: ['**/*.js', '**/*.mjs'],
@@ -13,9 +13,5 @@ export default [
       'prefer-const': 'error',
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
-  },
-  {
-    files: ['**/*.cjs'],
-    languageOptions: { ecmaVersion: 2023, sourceType: 'commonjs', globals: globals.node },
   },
 ]
