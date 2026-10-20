@@ -81,7 +81,8 @@ More in [docs/statusline.md](docs/statusline.md).
 The [ReRead extension](vscode/README.md) shows the same countdown in the editor's status bar, for the latest Claude Code
 session in your workspace, whether Claude Code runs in the terminal or in the editor. Click it for the report of that
 workspace, in an editor tab. Install it from the
-[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=hamperpick.reread).
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=hamperpick.reread), or from
+[Open VSX](https://open-vsx.org/extension/hamperpick/reread) for Cursor, Antigravity and other editors that use it.
 
 ## Options
 

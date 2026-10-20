@@ -3,12 +3,13 @@
 All notable changes to ReRead. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.2.1 - 2026-10-20
 
 - The VS Code extension (`vscode/`, with its own changelog): the prompt cache countdown of the workspace's latest
   Claude Code session in the status bar, and the report in an editor tab, for the workspace or every project. Works in
   Cursor and Antigravity too.
 - The report saves its image, JSON and CSV through the editor's save dialog when it is shown in VS Code.
+- The README links the extension on Open VSX, for Cursor, Antigravity and other editors that use it.
 
 ## 0.2.0 - 2026-10-19
 
