@@ -219,6 +219,12 @@ their own way, so the dollar figures are what the same tokens would cost on the 
 No. It reads only token counts from local files, makes no network requests and has no dependencies. See
 [Private by design](#private-by-design).
 
+## Help and privacy
+
+- Questions or problems: [contact@hamperpick.in](mailto:contact@hamperpick.in) or [GitHub issues](https://github.com/tecyfyai/reread/issues)
+- Website: [hamperpick.in/tools/reread](https://hamperpick.in/tools/reread)
+- Privacy: [what ReRead reads, keeps and where](https://hamperpick.in/tools/reread/privacy)
+
 ## Related
 
 [Agent Chime](https://marketplace.visualstudio.com/items?itemName=hamperpick.agent-chime) (also on

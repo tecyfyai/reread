@@ -58,6 +58,12 @@ npx reread-cli
 The same report from a terminal, plus a cache countdown for Claude Code's own status line. See
 [ReRead on GitHub](https://github.com/tecyfyai/reread).
 
+## Help and privacy
+
+- Questions or problems: [contact@hamperpick.in](mailto:contact@hamperpick.in) or [GitHub issues](https://github.com/tecyfyai/reread/issues)
+- Website: [hamperpick.in/tools/reread](https://hamperpick.in/tools/reread)
+- Privacy: [what ReRead reads, keeps and where](https://hamperpick.in/tools/reread/privacy)
+
 ## Related
 
 Agent Chime plays a sound when Claude Code, Codex, Cursor's agent or Antigravity CLI finishes or needs your approval,
