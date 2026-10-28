@@ -113,8 +113,8 @@ export function latestClaudeSession(folders, { dirs = claudeDirs(), cwdCache = n
 }
 
 /**
- * One line of a session file as a reply, or null when it is not one. Only token counts, the model, the time and
- * the ids are kept.
+ * One line of a session file as a reply, or null when it is not one. Only token counts, the model, the effort
+ * level, the time and the ids are kept.
  * @param {string} line
  * @param {number} since  replies before this time are left out
  * @returns {Call | null}
@@ -136,6 +136,7 @@ export function callOf(line, since) {
   // Some replies list 1-hour writes in the breakdown while the total says 0; the breakdown is kept.
   const cw = n(u.cache_creation_input_tokens)
   const cw1 = n(u.cache_creation?.ephemeral_1h_input_tokens)
+  const out = n(u.output_tokens)
   return {
     key: `${m.id}|${j.requestId ?? ''}`,
     ts,
@@ -144,7 +145,9 @@ export function callOf(line, since) {
     cw5: Math.max(0, cw - cw1),
     cw1,
     read: n(u.cache_read_input_tokens),
-    out: n(u.output_tokens),
+    out,
+    think: n(u.output_tokens_details?.thinking_tokens),
+    effort: typeof j.effort === 'string' ? j.effort : '',
   }
 }
 
@@ -156,8 +159,10 @@ export function callOf(line, since) {
  */
 export function collect(calls, call) {
   const old = calls.get(call.key)
-  if (old) old.out = Math.max(old.out, call.out)
-  else calls.set(call.key, call)
+  if (old) {
+    old.out = Math.max(old.out, call.out)
+    old.think = Math.max(old.think ?? 0, call.think ?? 0)
+  } else calls.set(call.key, call)
 }
 
 /**
@@ -197,6 +202,8 @@ export function readClaudeFile(file, since, seen) {
   }
   eachLine(file, onLine)
   for (const [key, c] of calls) {
+    // A reply written once per content block can list thinking from a later block than its output count.
+    c.think = Math.min(c.think ?? 0, c.out)
     c.seen = seen.has(key)
     seen.add(key)
   }

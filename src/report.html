@@ -373,6 +373,12 @@ footer .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12
     </section>
   </div>
 
+  <section class="card" style="margin-top:16px" id="efforts-box" aria-labelledby="h-efforts" hidden>
+    <h2 id="h-efforts">By effort level</h2>
+    <p class="sub" id="efforts-sub">The effort level each reply ran at, and how much of its output was thinking.</p>
+    <div id="efforts"></div>
+  </section>
+
   <section class="card" style="margin-top:16px" id="sessions" aria-labelledby="h-sessions">
     <div class="card-head">
       <div>
@@ -471,7 +477,7 @@ footer .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12
   const D = {
     version: S(raw.version), generatedAt: S(raw.generatedAt), span: S(raw.span) || 'your sessions', anon: !!raw.anon,
     daily: arr(raw.daily), buckets: arr(raw.buckets), models: arr(raw.models), projects: arr(raw.projects),
-    sessions: arr(raw.sessions), findings: arr(raw.findings), share: S(raw.share),
+    sessions: arr(raw.sessions), findings: arr(raw.findings), share: S(raw.share), efforts: arr(raw.efforts),
     product: S(raw.product) || 'Claude Code', tools: arr(raw.tools),
   }
   const REASONS = ['cold', 'model', 'prefix']
@@ -796,13 +802,32 @@ footer .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12
       return el('tr', null,
         el('td', { class: 'name mono', title: S(m.model), text: S(m.model) || '(unknown)' }),
         el('td', { class: 'num opt', text: int(m.calls) }),
-        el('td', { class: 'num', text: usd(u) }),
+        m.priced === false ? el('td', { class: 'num muted', text: 'no price' }) : el('td', { class: 'num', text: usd(u) }),
         el('td', { class: 'num' }, minibar([['read', r], ['rebuild', b]], pct(r + b, 0))))
     })
-    box.replaceChildren(simpleTable([['Model'], ['Replies', 1, 1], ['Cost', 1], ['Re-reading', 1]], rows),
+    const unpriced = sm.unpriced || {}
+    const note = N(unpriced.calls)
+      ? el('p', { class: 'sub', style: 'margin:12px 0 0', text: `${plural(N(unpriced.calls), 'reply', 'replies')} from models with no known price are left out of every cost and share.` })
+      : ''
+    box.replaceChildren(simpleTable([['Model'], ['Replies', 1, 1], ['Cost', 1], ['Re-reading', 1]], rows), note,
       el('div', { class: 'chart-legend', style: 'margin:12px 0 0' },
         el('span', null, el('i', { class: 'sw read' }), 'Cache reads'),
         el('span', null, el('i', { class: 'sw rebuild' }), 'Written again')))
+  }
+
+  function renderEfforts() {
+    if (!D.efforts.length) return
+    const th = sm.thinking || {}
+    $('efforts-box').hidden = false
+    if (N(th.tokens)) $('efforts-sub').textContent = `Thinking was ${pct(N(th.shareOfOutput), 0)} of all output tokens and cost ${usd(N(th.usd))}, ${pct(N(th.share), 1)} of your usage. Effort levels are each tool's own; a level in one tool is not the same as in another.`
+    const rows = D.efforts.map((e) => el('tr', null,
+      el('td', { class: 'name', text: S(e.name) }),
+      el('td', { class: 'name mono', text: S(e.effort) }),
+      el('td', { class: 'num opt', text: int(N(e.calls)) }),
+      el('td', { class: 'num', text: usd(N(e.usd)) }),
+      el('td', { class: 'num' }, minibar([['read', N(e.thinkingShareOfOutput)]], pct(N(e.thinkingShareOfOutput), 0))),
+      el('td', { class: 'num opt', text: usd(N(e.thinkingUsd)) })))
+    $('efforts').replaceChildren(simpleTable([['Tool'], ['Effort'], ['Replies', 1, 1], ['Cost', 1], ['Thinking', 1], ['Thinking cost', 1, 1]], rows))
   }
 
   // ---------- sessions ----------
@@ -1182,6 +1207,7 @@ footer .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12
   renderWhy()
   renderProjects()
   renderModels()
+  renderEfforts()
   renderSessions()
   renderFindings()
   renderShare()

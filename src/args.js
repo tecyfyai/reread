@@ -15,7 +15,7 @@ export class UsageError extends Error {}
  * @property {string} dir        the sessions folder given with --dir, or ''
  * @property {'all' | import('./tools.js').Tool} tool  whose sessions to read
  * @property {'text' | 'json' | 'csv' | 'md'} format
- * @property {'' | 'project' | 'model' | 'day' | 'tool'} by
+ * @property {'' | 'project' | 'model' | 'day' | 'tool' | 'effort'} by
  * @property {number} top        sessions in the summary
  * @property {string | null} html  null: decide by the terminal; '': a file in a private temp folder; else this path
  * @property {boolean} text      --text: the summary only
@@ -109,8 +109,8 @@ export function parseArgs(argv, now = Date.now()) {
   if (!Number.isInteger(top) || top < 0) throw new UsageError('--top takes a whole number, such as --top 20')
 
   const by = values.get('--by') ?? ''
-  if (by !== '' && by !== 'project' && by !== 'model' && by !== 'day' && by !== 'tool') {
-    throw new UsageError('--by takes project, model, tool or day')
+  if (by !== '' && by !== 'project' && by !== 'model' && by !== 'day' && by !== 'tool' && by !== 'effort') {
+    throw new UsageError('--by takes project, model, tool, effort or day')
   }
 
   const tool = /** @type {Options['tool']} */ (values.get('--tool') ?? 'all')

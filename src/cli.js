@@ -29,7 +29,7 @@ Output
   --json             all the numbers as JSON
   --csv              every session as CSV
   --md               a Markdown summary, to paste into an issue or a pull request
-  --by <what>        add a breakdown to the summary: project, model, tool or day
+  --by <what>        add a breakdown to the summary: project, model, tool, effort or day
   --top <n>          sessions in the summary (default 10)
   --anon             replace project names with "project 1", "project 2", ... and leave branches out
 
@@ -91,6 +91,11 @@ async function run(argv) {
     onProgress: progress ? (n, total) => process.stderr.write(`\rReading ${n} of ${total} session files…`) : undefined,
   })
   if (progress) process.stderr.write('\r\x1b[K')
+  if (a.unread.length) {
+    process.stderr.write(
+      `reread: ${a.unread.length} compressed Codex session ${a.unread.length === 1 ? 'file was' : 'files were'} not read, so their usage is missing: reading them needs Node.js 22.15 or newer (this is ${process.version})\n`,
+    )
+  }
   if (a.skipped.length) {
     const [first] = a.skipped
     const more = a.skipped.length > 1 ? ` and ${a.skipped.length - 1} more` : ''

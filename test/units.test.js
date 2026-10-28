@@ -5,9 +5,9 @@ import { appendFileSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, test } from 'node:test'
-import { analyze } from '../src/analyze.js'
-import { PRICES, priceOf } from '../src/prices.js'
-import { csvCell } from '../src/render.js'
+import { analyze, summarize } from '../src/analyze.js'
+import { hasPrice, PRICES, priceOf } from '../src/prices.js'
+import { csvCell, renderText } from '../src/render.js'
 import { buildReport, readTemplate } from '../src/report.js'
 import { readCodexFile } from '../src/codex.js'
 import { claudeFolderName, latestClaudeSession } from '../src/claude.js'
@@ -51,7 +51,27 @@ describe('reading Codex', () => {
     assert.equal(r.calls.length, 1)
     const { key, ...c } = r.calls[0]
     assert.ok(key.startsWith('codex|resp-'))
-    assert.deepEqual(c, { ts: T0, model: 'gpt-6.1-sol', input: 2000, cw5: 0, cw1: 0, read: 3000, out: 7, seen: false })
+    assert.deepEqual(c, {
+      ts: T0,
+      model: 'gpt-6.1-sol',
+      input: 2000,
+      cw5: 0,
+      cw1: 0,
+      read: 3000,
+      out: 7,
+      think: 0,
+      effort: 'medium',
+      seen: false,
+    })
+  })
+
+  test('reasoning tokens are the thinking part of the output; the effort comes from the turn', () => {
+    const lines = rollout({ effort: 'high', responses: [{ at: 0, input: 5000, out: 300, reasoning: 120 }] })
+    const root = folder({ [FILE]: lines })
+    const [c] = readCodexFile(path.join(root, FILE), 0, new Set()).calls
+    assert.equal(c.out, 300)
+    assert.equal(c.think, 120)
+    assert.equal(c.effort, 'high')
   })
 
   test('older files: each new running total in token_count is one response, repeats are not', () => {
@@ -144,6 +164,92 @@ describe('statusline', () => {
     const cached = statusline(input(file), { now, cacheDir })
     assert.equal(cached, statusline(input(file), { now, cacheDir: null }))
     assert.match(cached, /^ctx 52k · cache warm 4:00 · re-read \d+%$/)
+  })
+  test('a model with no known price shows no cost and no re-read share', () => {
+    const root = folder({ 'a.jsonl': [reply({ id: 1, at: 0, write: 50000, model: 'deepseek-chat' })] })
+    const line = statusline(input(path.join(root, 'a.jsonl')), { now: T0 + 30 * MIN, cacheDir: null })
+    assert.equal(line, 'ctx 50k · cache cold: next reply rewrites 50k')
+  })
+})
+
+describe('models with no known price', () => {
+  test('are counted as replies and tokens, left out of every cost, and named', () => {
+    const root = folder({
+      'p/a.jsonl': [
+        reply({ id: 1, at: 0, write: 5000, out: 100 }),
+        reply({ id: 2, at: MIN, model: 'deepseek-chat', input: 3000, out: 200, think: 50 }),
+        reply({ id: 3, at: 2 * MIN, model: 'qwen3-coder-plus', input: 1000, out: 100 }),
+      ],
+    })
+    const a = analyze(sessionFiles([root], { since: 0, project: '', tool: 'claude' }), { since: 0 })
+    const priced = analyze(
+      sessionFiles([folder({ 'p/a.jsonl': [reply({ id: 1, at: 0, write: 5000, out: 100 })] })], {
+        since: 0,
+        project: '',
+        tool: 'claude',
+      }),
+      { since: 0 },
+    )
+    assert.equal(a.total.calls, 3)
+    assert.equal(a.total.cost, priced.total.cost)
+    assert.equal(a.total.thinkCost, 0)
+    assert.equal(a.total.unpricedCalls, 2)
+    assert.equal(a.total.unpricedTokens, 3000 + 200 + 1000 + 100)
+    const data = summarize(a, { span: 'test', anon: false, version: 'test' })
+    assert.deepEqual(data.summary.unpriced.models, ['deepseek-chat', 'qwen3-coder-plus'])
+    assert.deepEqual(
+      data.models.map((m) => [m.model, m.priced]),
+      [
+        ['claude-sonnet-4-5', true],
+        ['deepseek-chat', false],
+        ['qwen3-coder-plus', false],
+      ],
+    )
+    assert.match(renderText(data, { top: 0, by: '', color: false }), /2 replies from models with no known price/)
+  })
+
+  test('known families and dated ids still have a price', () => {
+    for (const m of [
+      'claude-opus-5-5',
+      'claude-sonnet-4-5-20250929',
+      'gpt-6.1-sol',
+      'codex-auto-review',
+      'gemini-3.8-flash',
+    ])
+      assert.ok(hasPrice(m), m)
+    for (const m of ['', 'deepseek-chat', 'qwen3-coder-plus', 'glm-4.6']) assert.ok(!hasPrice(m), m)
+  })
+})
+
+describe('thinking and effort', () => {
+  test('Claude: thinking counted once per reply, never above its output; effort kept; the finding and breakdown', () => {
+    const lines = [
+      // One reply written once per content block: the later block has the full counts.
+      reply({ id: 1, at: 0, write: 5000, out: 10, think: 400, effort: 'high' }),
+      reply({ id: 1, at: 0, write: 5000, out: 1000, think: 800, effort: 'high' }),
+      reply({ id: 2, at: MIN, read: 5000, out: 1000, think: 50, effort: 'low' }),
+      // No thinking field (an older Claude Code): no thinking counted.
+      reply({ id: 3, at: 2 * MIN, read: 5000, out: 1000 }),
+    ]
+    const root = folder({ 'p/a.jsonl': lines })
+    const a = analyze(sessionFiles([root], { since: 0, project: '', tool: 'claude' }), { since: 0 })
+    assert.equal(a.total.out, 3000)
+    assert.equal(a.total.think, 850)
+    const out = priceOf('claude-sonnet-4-5').output
+    assert.ok(Math.abs(a.total.thinkCost - (850 * out) / 1e6) < 1e-9)
+    assert.deepEqual(
+      [...a.efforts.values()].map((e) => [e.tool, e.effort, e.calls, e.think]),
+      [
+        ['claude', 'high', 1, 800],
+        ['claude', 'low', 1, 50],
+      ],
+    )
+  })
+
+  test('a reply listing more thinking than output is capped at its output', () => {
+    const root = folder({ 'p/a.jsonl': [reply({ id: 1, at: 0, out: 100, think: 900 })] })
+    const a = analyze(sessionFiles([root], { since: 0, project: '', tool: 'claude' }), { since: 0 })
+    assert.equal(a.total.think, 100)
   })
 })
 

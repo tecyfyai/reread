@@ -48,6 +48,17 @@ function freshAction(tools) {
 }
 
 /**
+ * How to lower the effort level, in the tools used that record thinking.
+ * @param {import('./tools.js').Tool[]} tools
+ */
+function effortAction(tools) {
+  const ways = []
+  if (tools.includes('claude')) ways.push('claude --effort low in Claude Code')
+  if (tools.includes('codex')) ways.push('model_reasoning_effort in ~/.codex/config.toml for Codex')
+  return `For routine tasks, use a lower effort level (${ways.join('; ') || 'in your tool'}); keep the higher levels for hard problems.`
+}
+
+/**
  * @param {import('./analyze.js').Analysis} a
  * @param {import('./tools.js').Tool[]} [tools]  the tools the sessions came from
  * @returns {Finding[]}
@@ -115,6 +126,25 @@ export function findingsOf(a, tools = ['claude']) {
       text: `The whole history was written again ${rb.cold.n + rb.model.n + rb.prefix.n} times, ${LOST[worst].why(rb[worst].n)}.`,
       action: LOST[worst].action,
       usd: round2(total.rebuildCost),
+    })
+  }
+
+  const thinkShare = pct(total.thinkCost, total.cost)
+  if (thinkShare >= 3) {
+    const levels = [...a.efforts.values()].filter((e) => e.out > 0 && e.calls >= 20)
+    const lo = levels.reduce((m, e) => (!m || e.think / e.out < m.think / m.out ? e : m), /** @type {any} */ (null))
+    const hi = levels.reduce((m, e) => (!m || e.think / e.out > m.think / m.out ? e : m), /** @type {any} */ (null))
+    const spread =
+      lo && hi && lo !== hi
+        ? ` At ${hi.effort} effort in ${TOOLS[/** @type {import('./tools.js').Tool} */ (hi.tool)].name}, ${pct(hi.think, hi.out).toFixed(0)}% of the output was thinking; at ${lo.effort} effort in ${TOOLS[/** @type {import('./tools.js').Tool} */ (lo.tool)].name}, ${pct(lo.think, lo.out).toFixed(0)}%.`
+        : ''
+    out.push({
+      id: 'thinking',
+      value: usd(total.thinkCost),
+      title: `Thinking made ${pct(total.think, total.out).toFixed(0)}% of your output tokens, ${thinkShare.toFixed(1)}% of your usage`,
+      text: `${tokens(total.think)} thinking tokens, billed as output.${spread}`,
+      action: effortAction(tools),
+      usd: round2(total.thinkCost),
     })
   }
 

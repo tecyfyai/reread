@@ -3,6 +3,18 @@
 All notable changes to ReRead. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org/).
 
+## 0.3.0 - 2026-10-28
+
+- Thinking: the share of output tokens and of usage spent on thinking, from Claude Code's `thinking_tokens` and Codex's
+  `reasoning_output_tokens`, in the summary, the Markdown, the JSON and a new key finding.
+- Effort levels: the cost and thinking share of each tool's effort level (low, medium, high and so on), in the report's
+  new "By effort level" section and with `--by effort`.
+- Models without a known price, such as DeepSeek or Qwen models run through Claude Code, are no longer priced as
+  Claude Opus. Their replies and tokens are counted, left out of every cost and share, and listed in the summary and
+  the report. For such a session, the status line shows neither a cost nor a re-read share.
+- On Node.js versions older than 22.15, ReRead now reports how many compressed Codex session files it could not read.
+  Previously, their usage was omitted without notice.
+
 ## 0.2.1 - 2026-10-20
 
 - The VS Code extension (`vscode/`, with its own changelog): the prompt cache countdown of the workspace's latest

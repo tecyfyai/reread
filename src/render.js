@@ -25,7 +25,7 @@ const REASON_TEXT = {
 /**
  * The summary for the terminal.
  * @param {Report} data
- * @param {{ top: number, by: '' | 'project' | 'model' | 'day' | 'tool', color: boolean }} opts
+ * @param {{ top: number, by: '' | 'project' | 'model' | 'day' | 'tool' | 'effort', color: boolean }} opts
  */
 export function renderText(data, { top, by, color }) {
   const paint = (/** @type {number} */ code) => (/** @type {unknown} */ t) =>
@@ -44,12 +44,26 @@ export function renderText(data, { top, by, color }) {
     dim(
       `  ${data.span} · ${plural(S.sessions, 'session')} · ${plural(S.calls, 'reply', 'replies')} · ${usd(S.apiEquivalentUSD)} at API prices`,
     ),
+    ...(S.unpriced.calls
+      ? [
+          yellow(
+            `  ${plural(S.unpriced.calls, 'reply', 'replies')} from models with no known price (${S.unpriced.models.join(', ')}) are left out of the cost.`,
+          ),
+        ]
+      : []),
     '',
     `  ${pad('Reading history from the cache', 34)}${lpad(`${S.cacheReadShare.toFixed(1)}%`, 7)}  ${dim(`${S.tokensReadFromCache}% of all tokens read`)}`,
     `  ${pad('Writing history again', 34)}${lpad(`${S.rebuildShare.toFixed(1)}%`, 7)}  ${dim('after the cache was lost')}`,
     `  ${pad('Everything else', 34)}${lpad(`${S.otherShare.toFixed(1)}%`, 7)}  ${dim('new input, first cache writes, output')}`,
     '',
   ]
+  if (S.thinking.tokens) {
+    out.splice(
+      -1,
+      0,
+      `  ${pad('Of which thinking', 34)}${lpad(`${S.thinking.share.toFixed(1)}%`, 7)}  ${dim(`${S.thinking.shareOfOutput}% of output tokens`)}`,
+    )
+  }
 
   const reasons = REASONS.filter((w) => S.rebuilds[w].count)
   if (reasons.length) {
@@ -62,7 +76,19 @@ export function renderText(data, { top, by, color }) {
     out.push('')
   }
 
-  if (by) {
+  if (by === 'effort') {
+    out.push(bold('  By effort level'))
+    out.push(
+      dim(`  ${pad('tool', 14)}${pad('effort', 16)}${lpad('replies', 9)}${lpad('cost', 10)}${lpad('thinking', 10)}`),
+    )
+    for (const e of data.efforts) {
+      out.push(
+        `  ${pad(e.name.slice(0, 13), 14)}${pad(e.effort.slice(0, 15), 16)}${lpad(int(e.calls), 9)}${lpad(usd(e.usd), 10)}${lpad(`${e.thinkingShareOfOutput.toFixed(0)}%`, 10)}`,
+      )
+    }
+    if (!data.efforts.length) out.push(dim('  No effort levels recorded in these sessions.'))
+    out.push(dim('  thinking: share of the output tokens'), '')
+  } else if (by) {
     /** @type {[string, number, number, number][]} */
     const rows =
       by === 'project'
@@ -122,11 +148,20 @@ export function renderMarkdown(data, { top }) {
     '',
     `_${data.span} · ${plural(S.sessions, 'session')} · ${plural(S.calls, 'reply', 'replies')} · ${usd(S.apiEquivalentUSD)} at API prices · [ReRead](${HOMEPAGE}) ${VERSION}_`,
     '',
+    ...(S.unpriced.calls
+      ? [
+          `> ${plural(S.unpriced.calls, 'reply', 'replies')} from models with no known price (${S.unpriced.models.map((m) => `\`${cell(m)}\``).join(', ')}) are left out of the cost.`,
+          '',
+        ]
+      : []),
     '| Where the usage went | Share |',
     '|---|---:|',
     `| Reading history from the cache | ${S.cacheReadShare.toFixed(1)}% |`,
     `| Writing history again, after the cache was lost | ${S.rebuildShare.toFixed(1)}% |`,
     `| Everything else (new input, first cache writes, output) | ${S.otherShare.toFixed(1)}% |`,
+    ...(S.thinking.tokens
+      ? [`| Of all usage, thinking (${S.thinking.shareOfOutput}% of output tokens) | ${S.thinking.share.toFixed(1)}% |`]
+      : []),
     '',
   ]
   const reasons = REASONS.filter((w) => S.rebuilds[w].count)

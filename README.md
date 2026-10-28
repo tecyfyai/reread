@@ -21,13 +21,14 @@ Code, Codex and Antigravity already keep. Nothing is uploaded, and it has no dep
   Reading history from the cache      33.6%  95.2% of all tokens read
   Writing history again               18.7%  after the cache was lost
   Everything else                     47.7%  new input, first cache writes, output
+  Of which thinking                    5.9%  27% of output tokens
 ```
 
 Every reply in a session sends the whole conversation to the model again. Prompt caching makes those re-reads
 cheaper, but in a long session they still add up, and when the cache is lost the whole history is written again at
 full price. ReRead shows you the split, when and why the cache was lost, and which sessions cost the most.
 
-Every tool with sessions on your machine is read; `--tool claude`, `--tool codex` or `--tool antigravity` picks one. Needs Node.js 20 or newer (22.15 or newer also reads Codex's archived sessions).
+Every tool with sessions on your machine is read; `--tool claude`, `--tool codex` or `--tool antigravity` picks one. Needs Node.js 20 or newer (22.15 or newer also reads Codex's compressed sessions; on an older Node.js, ReRead says how many it had to skip).
 
 ## The report
 
@@ -35,13 +36,14 @@ Every tool with sessions on your machine is read; `--tool claude`, `--tool codex
 
 - **Key findings** first: a few cards, the costliest first, each with one number, what it means and what to do
   (how much of your usage came from long contexts, how concentrated it is in a few sessions, what losing the cache
-  cost and why, how large your context grew before each compaction).
+  cost and why, how large your context grew before each compaction, how much of your usage was thinking).
 - **The split**: re-reading from the cache, history written again, and everything else.
 - **By day**: what each day cost and how much of it was re-reading.
 - **By context size**: how much of your usage came from replies with a large context (over 150k is where it adds up).
 - **Why the cache was lost**: a break longer than its life (5 minutes or 1 hour), a model switch mid-session, or a
   change near the start of the context (tools, MCP servers, settings).
 - **By project and by model**, and by tool when you use more than one.
+- **By effort level**: the cost of each tool's effort levels, and how much of their output was thinking.
 - **Sessions**: the 10 costliest, sortable and searchable across all of them, with their git branch. Open one to see
   its context grow reply by reply, with each rebuild and compaction marked.
 - **Share**: copy a line of text, or save an image card with no project names on it. Hide names in the whole report
@@ -103,7 +105,7 @@ Output
   --json             all the numbers as JSON
   --csv              every session as CSV
   --md               a Markdown summary, to paste into an issue or a pull request
-  --by <what>        add a breakdown to the summary: project, model, tool or day
+  --by <what>        add a breakdown to the summary: project, model, tool, effort or day
   --top <n>          sessions in the summary (default 10)
   --anon             replace project names with "project 1", "project 2", ... and leave branches out
 ```
@@ -112,6 +114,7 @@ Examples:
 
 ```
 npx reread-cli --days 7 --by model          # this week, by model
+npx reread-cli --by effort                  # cost and thinking share by effort level
 npx reread-cli --tool codex                 # Codex sessions only
 npx reread-cli --project api --text         # one project, terminal only
 npx reread-cli --json | jq .summary         # the numbers, for your own scripts
@@ -139,6 +142,11 @@ their own way and do not publish it, so treat the percentage as a guide, not you
 A reply counts once, in the session that made it, even when a resumed session copies it; a subagent's replies count
 toward the session that started it. "Writing history again" is estimated from token counts: a reply whose cache read
 fell below half of the previous reply's context while the context did not shrink.
+
+Thinking is the part of the output the model spent reasoning, billed as output: Claude Code records it as
+`thinking_tokens` and Codex as `reasoning_output_tokens`, next to the effort level each reply ran at. ReRead shows its
+share of output and of usage, and `--by effort` breaks the cost down by tool and effort level. Antigravity's
+transcripts record neither, so its replies count no thinking.
 
 The details, with every rule and threshold: [docs/how-it-counts.md](docs/how-it-counts.md). None of the tools documents
 its session format, and any may change it; if ReRead reads yours wrong, please
@@ -181,6 +189,20 @@ it, so ReRead prices its replies at the model in Antigravity's settings (Gemini 
 stay right whatever the model. Gemini CLI was retired for individual users in June 2026 in favour of Antigravity CLI,
 so ReRead does not read it.
 
+### How much of my Claude Code usage is thinking?
+
+ReRead shows it directly. Claude Code records the thinking tokens of each reply and the effort level it ran at, and
+Codex records its reasoning tokens the same way. ReRead adds them up as a share of your output and of your usage, and
+`--by effort` shows the cost and thinking share of each effort level. Thinking is billed as output, so on a high
+effort level it can be a large part of each reply's price; a lower level (`claude --effort low`, or
+`model_reasoning_effort` in Codex's `config.toml`) suits routine tasks.
+
+### What about DeepSeek, Qwen or other models?
+
+When a coding agent ReRead reads runs a model it has no price for, such as a DeepSeek or Qwen model run through Claude
+Code, ReRead counts those replies and their tokens, leaves them out of every cost and share rather than guess a price,
+and names the models in the summary and the report.
+
 ### How is ReRead different from ccusage?
 
 [ccusage](https://github.com/ccusage/ccusage) reports how many tokens you used and what they cost, by day, month or
@@ -196,6 +218,13 @@ their own way, so the dollar figures are what the same tokens would cost on the 
 
 No. It reads only token counts from local files, makes no network requests and has no dependencies. See
 [Private by design](#private-by-design).
+
+## Related
+
+[Agent Chime](https://marketplace.visualstudio.com/items?itemName=hamperpick.agent-chime) (also on
+[Open VSX](https://open-vsx.org/extension/hamperpick/agent-chime)) plays a sound in VS Code or Cursor when Claude Code,
+Codex, Cursor's agent or Antigravity CLI finishes or needs your approval, so you can return before the prompt cache goes
+cold.
 
 ## Contributing
 

@@ -5,7 +5,7 @@ import path from 'node:path'
 import { isInside } from './files.js'
 import { findingsOf } from './findings.js'
 import { dayOf, pct, round1, round2 } from './format.js'
-import { contextOf, costOf, priceOf } from './prices.js'
+import { contextOf, costOf, hasPrice, priceOf } from './prices.js'
 import { DISPLAY_ORDER, toolOf, TOOLS } from './tools.js'
 
 /** @typedef {import('./prices.js').Call} Call */
@@ -56,6 +56,11 @@ export const BUCKETS = /** @type {const} */ ([
  * @property {number} tokensRead
  * @property {number} peak         largest context
  * @property {number} longCost     cost of replies with a context over LONG_CONTEXT
+ * @property {number} out          output tokens
+ * @property {number} think        of which thinking (reasoning) tokens, where the tool records them
+ * @property {number} thinkCost    what the thinking tokens cost
+ * @property {number} unpricedCalls   replies from models with no known price, left out of every cost
+ * @property {number} unpricedTokens  their tokens, sent and output
  * @property {Record<Reason, { n: number, cost: number }>} rebuilds
  * @property {{ n: number, ctx: number }} compact  compactions, and the sum of the contexts they replaced
  * @property {number} [first]
@@ -72,6 +77,11 @@ export const emptyTotals = () => ({
   tokensRead: 0,
   peak: 0,
   longCost: 0,
+  out: 0,
+  think: 0,
+  thinkCost: 0,
+  unpricedCalls: 0,
+  unpricedTokens: 0,
   rebuilds: { cold: { n: 0, cost: 0 }, model: { n: 0, cost: 0 }, prefix: { n: 0, cost: 0 } },
   compact: { n: 0, ctx: 0 },
 })
@@ -91,6 +101,11 @@ export function addTotals(a, b) {
   a.tokensIn += b.tokensIn
   a.tokensRead += b.tokensRead
   a.longCost += b.longCost
+  a.out += b.out
+  a.think += b.think
+  a.thinkCost += b.thinkCost
+  a.unpricedCalls += b.unpricedCalls
+  a.unpricedTokens += b.unpricedTokens
   a.peak = Math.max(a.peak, b.peak)
   for (const w of REASONS) {
     a.rebuilds[w].n += b.rebuilds[w].n
@@ -109,6 +124,7 @@ export function addTotals(a, b) {
  * @property {number} cost
  * @property {number} readCost
  * @property {number} rebuildCost
+ * @property {number} thinkCost
  * @property {Reason | null} why  set when the whole history was written again
  * @property {number} flag        FLAG value for the report
  */
@@ -138,9 +154,17 @@ export function walk(calls, onCall = () => {}) {
       continue
     }
     const ctx = contextOf(c)
-    const p = priceOf(c.model, ctx)
-    const cost = costOf(c)
+    // A model with no known price costs nothing here, rather than a guessed price.
+    const priced = hasPrice(c.model)
+    const p = priced ? priceOf(c.model, ctx) : { input: 0, write5m: 0, write1h: 0, read: 0, output: 0 }
+    const cost = priced ? costOf(c) : 0
     const readCost = (c.read * p.read) / 1e6
+    const think = c.think ?? 0
+    const thinkCost = (think * p.output) / 1e6
+    if (!priced) {
+      s.unpricedCalls++
+      s.unpricedTokens += ctx + c.out
+    }
     /** @type {Reason | null} */
     let why = null
     let rebuildCost = 0
@@ -167,11 +191,22 @@ export function walk(calls, onCall = () => {}) {
     s.rebuildCost += rebuildCost
     s.tokensIn += ctx
     s.tokensRead += c.read
+    s.out += c.out
+    s.think += think
+    s.thinkCost += thinkCost
     s.peak = Math.max(s.peak, ctx)
     if (ctx > LONG_CONTEXT) s.longCost += cost
     s.first ??= c.ts
     s.last = c.ts
-    onCall(c, { ctx, cost, readCost, rebuildCost, why, flag: why ? FLAG[why] : shrank ? FLAG.shrink : FLAG.none })
+    onCall(c, {
+      ctx,
+      cost,
+      readCost,
+      rebuildCost,
+      thinkCost,
+      why,
+      flag: why ? FLAG[why] : shrank ? FLAG.shrink : FLAG.none,
+    })
     if (c.cw1 > 0) ttl = 3600e3
     else if (c.cw5 > 0) ttl = 300e3
     prev = c
@@ -183,6 +218,7 @@ export function walk(calls, onCall = () => {}) {
  * @typedef {Totals & { id: string, tool: Tool, project: string, branch: string, points: [number, number, number, number][] }} Session
  *   points: [time, context, cache read, FLAG] for each reply, for the report's chart
  * @typedef {{ calls: number, usd: number, readUsd: number, rebuildUsd: number }} Money
+ * @typedef {{ tool: Tool, effort: string, calls: number, usd: number, out: number, think: number, thinkUsd: number }} EffortRow
  */
 
 /**
@@ -205,6 +241,8 @@ export function analyze(files, { since, project = '', folders = [], onProgress }
   const models = new Map()
   /** @type {Map<string, Money>} */
   const buckets = new Map()
+  /** @type {Map<string, EffortRow>} */
+  const efforts = new Map()
   const zero = () => ({ calls: 0, usd: 0, readUsd: 0, rebuildUsd: 0 })
   /**
    * @param {Map<string, Money>} map
@@ -222,6 +260,8 @@ export function analyze(files, { since, project = '', folders = [], onProgress }
 
   /** @type {{ file: string, error: string }[]} */
   const skipped = []
+  /** Compressed files this Node.js cannot read. */
+  const unread = /** @type {string[]} */ ([])
 
   files.forEach((file, i) => {
     onProgress?.(i + 1, files.length)
@@ -236,6 +276,7 @@ export function analyze(files, { since, project = '', folders = [], onProgress }
       return
     }
     const { id, sub, cwd, branch, calls } = read
+    if (read.unread) unread.push(file)
     if (!calls.some((c) => !c.seen)) return
     const info = /** @type {import('./tools.js').ToolInfo} */ (TOOLS[tool])
     if (!info.projectInPath && needle) {
@@ -249,6 +290,16 @@ export function analyze(files, { since, project = '', folders = [], onProgress }
       tally(models, c.model, x)
       const label = /** @type {(typeof BUCKETS)[number]} */ (BUCKETS.find(([top]) => x.ctx < top))[1]
       tally(buckets, label, x)
+      if (c.effort) {
+        const ek = `${tool}|${c.effort}`
+        const e = efforts.get(ek) ?? { tool, effort: c.effort, calls: 0, usd: 0, out: 0, think: 0, thinkUsd: 0 }
+        e.calls++
+        e.usd += x.cost
+        e.out += c.out
+        e.think += c.think ?? 0
+        e.thinkUsd += x.thinkCost
+        efforts.set(ek, e)
+      }
       if (!sub) cur.points.push([c.ts, x.ctx, c.read, x.flag])
     })
     if (cwd && !cur.project) cur.project = path.basename(cwd)
@@ -257,7 +308,16 @@ export function analyze(files, { since, project = '', folders = [], onProgress }
     addTotals(total, s)
   })
 
-  return { total, sessions: [...sessions.values()].sort((a, b) => b.cost - a.cost), daily, models, buckets, skipped }
+  return {
+    total,
+    sessions: [...sessions.values()].sort((a, b) => b.cost - a.cost),
+    daily,
+    models,
+    buckets,
+    efforts,
+    skipped,
+    unread,
+  }
 }
 
 /**
@@ -357,6 +417,18 @@ export function summarize(a, { span, anon, version, now = new Date() }) {
       otherShare: round1(100 - share),
       tokensReadFromCache: round1(pct(total.tokensRead, total.tokensIn)),
       longContextShare: round1(pct(total.longCost, total.cost)),
+      unpriced: {
+        calls: total.unpricedCalls,
+        tokens: total.unpricedTokens,
+        models: [...a.models.keys()].filter((m) => !hasPrice(m)).map((m) => m || '(no model named)'),
+      },
+      thinking: {
+        tokens: total.think,
+        outputTokens: total.out,
+        shareOfOutput: round1(pct(total.think, total.out)),
+        usd: round2(total.thinkCost),
+        share: round1(pct(total.thinkCost, total.cost)),
+      },
       apiEquivalentUSD: round2(total.cost),
       rebuilds: /** @type {Record<Reason, { count: number, usd: number, share: number }>} */ (
         Object.fromEntries(
@@ -384,10 +456,22 @@ export function summarize(a, { span, anon, version, now = new Date() }) {
       .sort((x, y) => y[1].usd - x[1].usd)
       .map(([model, v]) => ({
         model,
+        priced: hasPrice(model),
         calls: v.calls,
         usd: round2(v.usd),
         readUsd: round2(v.readUsd),
         rebuildUsd: round2(v.rebuildUsd),
+      })),
+    efforts: [...a.efforts.values()]
+      .sort((x, y) => y.usd - x.usd)
+      .map((e) => ({
+        tool: e.tool,
+        name: TOOLS[e.tool].name,
+        effort: e.effort,
+        calls: e.calls,
+        usd: round2(e.usd),
+        thinkingShareOfOutput: round1(pct(e.think, e.out)),
+        thinkingUsd: round2(e.thinkUsd),
       })),
     projects: projects.map((p) => ({
       project: nameOf(p.project),

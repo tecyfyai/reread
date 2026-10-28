@@ -19,7 +19,9 @@ ReRead reads only the lines of `type: "assistant"` that carry `message.usage`, a
 | `message.usage.cache_creation.ephemeral_1h_input_tokens` | the part written to the 1-hour cache; the rest is the 5-minute cache |
 | `message.usage.cache_read_input_tokens`                  | cache reads: history sent again at the cache price                   |
 | `message.usage.output_tokens`                            | output                                                               |
+| `message.usage.output_tokens_details.thinking_tokens`    | the part of the output spent thinking                                |
 | `message.model`                                          | the price, and model switches                                        |
+| `effort`                                                 | the effort level the reply ran at                                    |
 | `message.id`, `requestId`                                | counting each reply once                                             |
 | `timestamp`                                              | days, and how long the cache was idle                                |
 | `cwd` (folder name only), `gitBranch`                    | the project and branch columns                                       |
@@ -27,23 +29,26 @@ ReRead reads only the lines of `type: "assistant"` that carry `message.usage`, a
 Replies with the model `<synthetic>` are made by Claude Code itself and are left out. Message text, tool calls and
 tool results are never parsed into anything ReRead keeps.
 
-Some replies list 1-hour cache writes in the breakdown while the total says 0. ReRead trusts the breakdown.
+Some replies list 1-hour cache writes in the breakdown while the total says 0. ReRead trusts the breakdown. Claude
+Code writes a reply once per content block; ReRead keeps the largest output and thinking counts, and never counts more
+thinking than output.
 
 ## Codex (`src/codex.js`)
 
 Codex writes each session as `~/.codex/sessions/YYYY/MM/DD/rollout-<time>-<id>.jsonl` (or under `$CODEX_HOME`), and
-moves old ones to `archived_sessions/` compressed with zstd, which ReRead reads on Node.js 22.15 or newer. From each file
-it keeps:
+compresses older ones with zstd (`.jsonl.zst`, in the same folders or in `archived_sessions/`). ReRead reads compressed
+files on Node.js 22.15 or newer; on an older version it reports how many it skipped. From each file it keeps:
 
 | Line                                               | Used for                                                                    |
 | -------------------------------------------------- | --------------------------------------------------------------------------- |
 | `session_meta`: `id`, `cwd`, `git.branch`          | the session, project and branch                                             |
-| `turn_context`: `model`                            | the price, and model switches                                               |
+| `turn_context`: `model`, `effort`                  | the price, model switches, and the effort level                             |
 | `token_usage_record`: `response_id`, `usage`       | one reply per response, counted once by its id                              |
 | `event_msg` of type `token_count` (older versions) | used only when a file has no usage records: one reply per new running total |
 
 OpenAI counts cached tokens inside `input_tokens`, so new input is `input_tokens − cached_input_tokens −
-cache_write_input_tokens`, cache reads are `cached_input_tokens` and output is `output_tokens` (reasoning included).
+cache_write_input_tokens`, cache reads are `cached_input_tokens` and output is `output_tokens`, of which
+`reasoning_output_tokens` is the thinking.
 OpenAI's cache has no write price, so a rebuild costs input price. Its life is not fixed (minutes, longer when the
 service is quiet); ReRead uses 5 minutes to name a rebuild "cache went cold", so treat that reason as approximate for
 Codex. `--project` matches the folder a Codex session ran in.
@@ -52,7 +57,8 @@ Codex. `--project` matches the folder a Codex session ran in.
 
 Antigravity keeps each conversation in `~/.gemini/antigravity-cli/brain/<id>/` (the CLI) or
 `~/.gemini/antigravity/brain/<id>/` (the app). ReRead reads `.system_generated/logs/transcript.jsonl` there, where each
-step the model took has `input_tokens` (new input), `cache_read_tokens`, `output_tokens` (thinking included) and
+step the model took has `input_tokens` (new input), `cache_read_tokens`, `output_tokens` (thinking included, but not
+counted separately, so ReRead shows no thinking share or effort level for Antigravity) and
 `created_at`; the other logs in that folder repeat it. These add up to the usage `agy --output-format json` reports.
 
 The transcript does not say which model answered, so every reply is priced at the model named in Antigravity's
@@ -85,8 +91,12 @@ cost = input × input price
 Prices come from Anthropic's, OpenAI's and Google's pricing pages, with the date they were read at the top of `src/prices.js`.
 Where a model charges more past a context size (Claude Haiku 5.5 past 100k tokens, OpenAI's larger models past 272k),
 a reply past it is priced at those rates. A model id with
-a date (`claude-sonnet-4-5-20250929`) gets its model's price; an id ReRead does not know is priced as the newest model
-of its family (opus, sonnet, haiku, or OpenAI's luna, terra and the rest, priced as GPT-6.1 Sol), or as Opus 5.5.
+a date (`claude-sonnet-4-5-20250929`) gets its model's price, and a new id of a known family is priced as the newest
+model of that family (opus, sonnet, haiku, gemini, or OpenAI's luna, terra and the rest, priced as GPT-6.1 Sol). Any
+other model, such as a DeepSeek or Qwen model run through Claude Code, has no price: its replies are counted as replies
+and tokens, left out of every cost and share, and named in the summary and the report.
+
+Thinking is priced at the output price of the model that produced it, since providers bill it as output.
 
 Prices are used only to weigh token kinds against each other: one cache-read token is far cheaper than one output
 token, and a share of tokens would hide that. Subscription plans count usage their own way and do not publish it.

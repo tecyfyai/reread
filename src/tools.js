@@ -16,6 +16,7 @@ import { existingDirs, filesUnder } from './files.js'
  * @property {string} cwd     the folder it ran in, or ''
  * @property {string} branch  its git branch, or ''
  * @property {import('./prices.js').Call[]} calls  its replies, oldest first
+ * @property {boolean} [unread]  a file this Node.js cannot read (a compressed one), so its replies are missing
  */
 
 /**

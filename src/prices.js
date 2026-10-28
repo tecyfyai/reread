@@ -124,6 +124,8 @@ function isOf(model, id) {
  * @property {number} cw1    tokens written to Anthropic's 1-hour cache
  * @property {number} read   tokens read from the cache
  * @property {number} out    output, reasoning included
+ * @property {number} [think]  of the output, thinking (reasoning) tokens, where the tool records them
+ * @property {string} [effort]  the effort level the reply ran at, where the tool records it
  * @property {boolean} [seen]  counted already in an earlier file
  */
 
@@ -154,6 +156,16 @@ export function priceOf(model = '', context = 0) {
     cache.set(model, entry)
   }
   return entry.long && context > entry.long.above ? entry.long.price : entry.base
+}
+
+/**
+ * Whether ReRead knows a price for a model id: a listed model, a dated or variant id of one, or a known family. Any
+ * other id (a DeepSeek or Qwen model run through Claude Code, say) has no price, and its replies are left out of costs.
+ * @param {string} [model]
+ */
+export function hasPrice(model = '') {
+  if (!model) return false
+  return IDS.some((k) => isOf(model, k)) || FAMILIES.some(([re]) => re.test(model.toLowerCase()))
 }
 
 /**

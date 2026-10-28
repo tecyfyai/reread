@@ -29,6 +29,7 @@ Claude Code, Codex and Antigravity:
   lost;
 - when and why the cache was lost (a long break, a model switch, a change near the start of the context);
 - how much came from long contexts, by day, by project, by model and by tool;
+- how much of your usage was thinking, and what each effort level cost;
 - your costliest sessions, each with its context growing reply by reply.
 
 Export the numbers as JSON or CSV, or save a share card with no project names on it.
@@ -56,5 +57,11 @@ npx reread-cli
 
 The same report from a terminal, plus a cache countdown for Claude Code's own status line. See
 [ReRead on GitHub](https://github.com/tecyfyai/reread).
+
+## Related
+
+[Agent Chime](https://marketplace.visualstudio.com/items?itemName=hamperpick.agent-chime) plays a sound when Claude
+Code, Codex, Cursor's agent or Antigravity CLI finishes or needs your approval, so you can return to a session before
+its cache goes cold.
 
 ReRead is independent and not made, endorsed or supported by Anthropic, OpenAI or Google. MIT licence.

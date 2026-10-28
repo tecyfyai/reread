@@ -22,7 +22,7 @@ import { walk } from './analyze.js'
 import { pct, tokens } from './format.js'
 import { callOf, collect } from './claude.js'
 import { readLines } from './files.js'
-import { contextOf, priceOf } from './prices.js'
+import { contextOf, hasPrice, priceOf } from './prices.js'
 
 /** @typedef {import('./prices.js').Call} Call */
 
@@ -52,8 +52,11 @@ export function statusline(input, { now = Date.now(), color = false, cacheDir = 
   const left = s.warmUntil - now
   const parts = [`ctx ${tokens(s.ctx)}`]
   if (left > 0) parts.push(paint(left < 60e3 ? 33 : 32)(`cache warm ${clock(left)}`))
-  else parts.push(paint(31)(`cache cold: next reply rewrites ${tokens(s.ctx)} (~$${s.rewriteUsd.toFixed(2)})`))
-  parts.push(`re-read ${s.rereadPct.toFixed(0)}%`)
+  else {
+    const price = s.rewriteUsd === null ? '' : ` (~$${s.rewriteUsd.toFixed(2)})`
+    parts.push(paint(31)(`cache cold: next reply rewrites ${tokens(s.ctx)}${price}`))
+  }
+  if (s.rereadPct !== null) parts.push(`re-read ${s.rereadPct.toFixed(0)}%`)
   return parts.join(' · ')
 }
 
@@ -74,6 +77,7 @@ export function sessionState(file, { cacheDir = defaultCacheDir() } = {}) {
   const s = walk([...calls.values()].sort((a, b) => a.ts - b.ts))
   if (!s.lastCall) return null
   const ctx = contextOf(s.lastCall)
+  const priced = hasPrice(s.lastCall.model)
   const p = priceOf(s.lastCall.model, ctx)
   return {
     model: s.lastCall.model,
@@ -82,8 +86,9 @@ export function sessionState(file, { cacheDir = defaultCacheDir() } = {}) {
     /** the cache's life: 5 minutes, or 1 hour once the session has written to the 1-hour cache */
     ttl: s.ttl,
     warmUntil: s.lastCall.ts + s.ttl,
-    rewriteUsd: (ctx * (s.ttl > 300e3 ? p.write1h : p.write5m)) / 1e6,
-    rereadPct: pct(s.readCost + s.rebuildCost, s.cost),
+    /** null when the model has no known price */
+    rewriteUsd: priced ? (ctx * (s.ttl > 300e3 ? p.write1h : p.write5m)) / 1e6 : null,
+    rereadPct: priced && s.cost > 0 ? pct(s.readCost + s.rebuildCost, s.cost) : null,
     usd: s.cost,
     replies: calls.size,
   }

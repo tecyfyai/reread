@@ -50,7 +50,7 @@ export function statusView(s, now) {
   const life = s.ttl > 300e3 ? '1-hour' : '5-minute'
   const cache = cold
     ? `**Cache cold** for ${clock(-left)}. The next reply writes the whole ${tokens(s.ctx)} context to the cache ` +
-      `again, about $${s.rewriteUsd.toFixed(2)} at API prices. Starting fresh (\`/clear\`) or compacting first costs less.`
+      `again${s.rewriteUsd === null ? '' : `, about $${s.rewriteUsd.toFixed(2)} at API prices`}. Starting fresh (\`/clear\`) or compacting first costs less.`
     : `**Cache warm** for ${clock(left)} more (the ${life} cache). A reply before then reads the context from the ` +
       `cache at a fraction of the price.`
   return {
@@ -63,8 +63,7 @@ export function statusView(s, now) {
       '',
       cache,
       '',
-      `Re-reading so far: ${s.rereadPct.toFixed(0)}% of this session's usage.`,
-      '',
+      ...(s.rereadPct === null ? [] : [`Re-reading so far: ${s.rereadPct.toFixed(0)}% of this session's usage.`, '']),
       'Click for the report of this workspace.',
     ].join('\n'),
   }

@@ -1,7 +1,7 @@
 // @ts-check
 // Reading Codex's session files ("rollouts"): ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl, and archived ones in
 // ~/.codex/archived_sessions (zstd-compressed, read where Node.js can decompress zstd). As with Claude Code, only token
-// counts, the model, the time and ids are kept, plus the folder and git branch from the session's header.
+// counts, the model, the effort level, the time and ids are kept, plus the folder and git branch from the session's header.
 import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import path from 'node:path'
@@ -43,9 +43,10 @@ const n = (v) => (typeof v === 'number' && v > 0 ? v : 0)
  * @param {string} key
  * @param {number} ts
  * @param {string} model
+ * @param {string} effort
  * @returns {Call}
  */
-function callFrom(u, key, ts, model) {
+function callFrom(u, key, ts, model, effort) {
   const read = n(u.cached_input_tokens)
   const cw = n(u.cache_write_input_tokens)
   return {
@@ -57,6 +58,8 @@ function callFrom(u, key, ts, model) {
     cw1: 0,
     read,
     out: n(u.output_tokens),
+    think: Math.min(n(u.reasoning_output_tokens), n(u.output_tokens)),
+    effort,
   }
 }
 
@@ -75,6 +78,7 @@ export function readCodexFile(file, since, seen) {
   let cwd = ''
   let branch = ''
   let model = ''
+  let effort = ''
   /** @type {Map<string, Call>} */
   const records = new Map()
   /** @type {Map<string, Call>} */
@@ -100,12 +104,13 @@ export function readCodexFile(file, since, seen) {
     }
     if (j.type === 'turn_context') {
       if (typeof p.model === 'string' && p.model) model = p.model
+      if (typeof p.effort === 'string') effort = p.effort
       return
     }
     const ts = Date.parse(j.timestamp)
     if (j.type === 'token_usage_record' && p.usage && typeof p.usage === 'object') {
       const key = `codex|${p.response_id ?? `${id}|${j.ordinal}`}`
-      if (ts >= since && !records.has(key)) records.set(key, callFrom(p.usage, key, ts, model))
+      if (ts >= since && !records.has(key)) records.set(key, callFrom(p.usage, key, ts, model, effort))
       return
     }
     if (j.type === 'event_msg' && p.type === 'token_count') {
@@ -114,12 +119,12 @@ export function readCodexFile(file, since, seen) {
       if (typeof total !== 'number' || total === lastTotal || !last) return
       lastTotal = total
       const key = `codex|${id}|${total}`
-      if (ts >= since) counts.set(key, callFrom(last, key, ts, model))
+      if (ts >= since) counts.set(key, callFrom(last, key, ts, model, effort))
     }
   }
 
   if (file.endsWith('.zst')) {
-    if (!canReadZstd) return { id, sub: false, cwd, branch, calls: [] }
+    if (!canReadZstd) return { id, sub: false, cwd, branch, calls: [], unread: true }
     const data = /** @type {any} */ (zlib).zstdDecompressSync(readFileSync(file))
     splitLines(data, onLine)
   } else {
