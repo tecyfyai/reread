@@ -60,8 +60,9 @@ The same report from a terminal, plus a cache countdown for Claude Code's own st
 
 ## Related
 
-[Agent Chime](https://marketplace.visualstudio.com/items?itemName=hamperpick.agent-chime) plays a sound when Claude
-Code, Codex, Cursor's agent or Antigravity CLI finishes or needs your approval, so you can return to a session before
-its cache goes cold.
+Agent Chime plays a sound when Claude Code, Codex, Cursor's agent or Antigravity CLI finishes or needs your approval,
+so you can return to a session before its cache goes cold. Get it from the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=hamperpick.agent-chime) or, for Cursor,
+Antigravity and VSCodium, from [Open VSX](https://open-vsx.org/extension/hamperpick/agent-chime).
 
 ReRead is independent and not made, endorsed or supported by Anthropic, OpenAI or Google. MIT licence.

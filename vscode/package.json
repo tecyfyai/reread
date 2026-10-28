@@ -2,7 +2,7 @@
   "name": "reread",
   "displayName": "ReRead: prompt cache countdown and token usage for Claude Code",
   "description": "See when your Claude Code prompt cache goes cold, and how much of your coding agent's usage was re-reading context or thinking (Claude Code, Codex, Antigravity). Local only; sends nothing.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "hamperpick",
   "license": "MIT",
   "icon": "icon.png",

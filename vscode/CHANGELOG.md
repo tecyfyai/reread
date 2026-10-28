@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- The listing links Agent Chime on both the VS Code Marketplace and Open VSX.
+
 ## 0.2.0
 
 - The report gains the thinking share of your output and usage, a "By effort level" section, and a key finding on
